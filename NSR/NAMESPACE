@@ -3,5 +3,6 @@
 export(NSR)
 export(NSR_batch)
 export(NSR_simple)
+export(NSR_super_simple)
 import(RCurl)
 import(rjson)
