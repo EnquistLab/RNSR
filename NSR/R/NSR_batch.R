@@ -3,10 +3,11 @@
 #'NSR_batch returns information on native status for species within a political region.
 #' @param occurrence_dataframe A properly formatted dataframe, see http://bien.nceas.ucsb.edu/bien/tools/nsr/batch-mode/
 #' @return Dataframe containing NSR results.
-#' @import RCurl, rjson
+#' @import RCurl rjson
 #' @export
 #' @examples \dontrun{
-#' nsr_testfile <- read.csv("http://bien.nceas.ucsb.edu/bien/wp-content/uploads/2019/02/nsr_testfile.csv")
+#' nsr_testfile <- 
+#'read.csv("http://bien.nceas.ucsb.edu/bien/wp-content/uploads/2019/02/nsr_testfile.csv")
 #'
 #' results <- NSR_batch(occurrence_dataframe = nsr_testfile)
 #'   
@@ -17,11 +18,13 @@
 #' results.t <- t(results[,2:ncol(results)]) 
 #' results.t[,1,drop =FALSE]
 #' # Summarize the main results
-#' results[ 1:10, c("species", "country", "state_province", "native_status", "native_status_reason")]
+#' results[ 1:10, 
+#' c("species", "country", "state_province", "native_status", "native_status_reason")]
 #' 
 #' # Compare summary flag isIntroduced to more detailed native_status values
 #' # and inspect souces consulted
-#' results[ 1:10, c("species", "country", "state_province", "native_status", "isIntroduced", "native_status_sources")]
+#' results[ 1:10, 
+#' c("species", "country", "state_province", "native_status", "isIntroduced", "native_status_sources")]
 #' 
 #' 
 #' 

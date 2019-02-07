@@ -3,16 +3,14 @@ Title: Tools to Access the Native Species Resolver
 Version: 0.0.0.9000
 Authors@R: c(
             person("Brad", "Boyle", email = "bboyle@email.arizona.edu", role = c("aut", "cre")),
-            person("Brian", "Maitner", email = "bmaitner@gmail.com", role = c("aut", "cre"))
+            person("Brian", "Maitner", email = "bmaitner@gmail.com", role = c("aut"))
             )
 Description: Provides tools for interacting with the Native Species Resolver (NSR) API and associated functionality.
 Depends: R (>= 3.5.0)
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
+Imports: 
+        RCurl,
+        rjson
 RoxygenNote: 6.0.1
-
-
-Authors@R: c(
-    person("Hadley", "Wickham", email = "hadley@rstudio.com", role = "cre"),
-    person("Winston", "Chang", email = "winston@rstudio.com", role = "aut"))

@@ -3,11 +3,12 @@
 #'NSR_simple returns information on native status for species within a political region.
 #' @param occurrence_dataframe A properly formatted dataframe, see http://bien.nceas.ucsb.edu/bien/tools/nsr/batch-mode/
 #' @return Dataframe containing NSR results.
-#' @import RCurl, rjson
+#' @import RCurl  rjson
 #' @export
 #' @examples \dontrun{
 #' 
-#' nsr_testfile <- read.csv("http://bien.nceas.ucsb.edu/bien/wp-content/uploads/2019/02/nsr_testfile.csv")
+#' nsr_testfile <- 
+#' read.csv("http://bien.nceas.ucsb.edu/bien/wp-content/uploads/2019/02/nsr_testfile.csv")
 #'
 #' results <- NSR_simple(occurrence_dataframe = nsr_testfile)
 #' 
