@@ -25,6 +25,11 @@ NSR_super_simple returns information on native status for species within a polit
 \examples{
 \dontrun{
 
-results <- NSR_super_simple(species = "Acer rubrum",country = "Canada",state_province = "Ontario")
+results <- NSR_super_simple(species = "Acer rubrum",
+           country = "Canada",state_province = "Ontario")
+
+results <- NSR_super_simple(species = c("Acer rubrum", "Aspen tremuloides") , 
+           country = c("Canada","Canada"),state_province = c("Ontario","Ontario"))
+
 }
 }
