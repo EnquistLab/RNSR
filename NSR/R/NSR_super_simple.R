@@ -74,7 +74,7 @@ NSR_super_simple <- function(species=NULL, country=NULL, state_province=NULL,cou
     full_url <- gsub(pattern = " ",replacement = "%20",x =  paste(base_url,species_url,country_url,state_url,county_url,format_url,sep = "") )
     
     
-    results_json <- postForm(full_url, .opts=list(postfields=obs_json, httpheader=headers))
+    results_json<-getURL(url = full_url)
     results <- fromJSON(results_json)
     results<-t(results[[1]][[1]]$nsr_result)
     results<-as.data.frame(results)
