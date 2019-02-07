@@ -11,6 +11,9 @@
 #' @examples \dontrun{
 #' 
 #' results <- NSR_super_simple(species = "Acer rubrum",country = "Canada",state_province = "Ontario")
+#' 
+#' results <- NSR_super_simple(species = c("Acer rubrum", "Aspen tremuloides") ,country = c("Canada","Canada"),state_province = c("Ontario","Ontario"))
+#' 
 #' }
 NSR_super_simple <- function(species=NULL, country=NULL, state_province=NULL,county_parish=NULL){
   
