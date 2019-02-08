@@ -90,7 +90,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
                  <span class="dt">country =</span>  <span class="st">&quot;Canada&quot;</span>, 
                  <span class="dt">state_province =</span> <span class="st">&quot;Ontario&quot;</span>)</code></pre></div>
 <pre><code>##                               results
-## 1      2019-02-08-14:16:41:0.32744200
+## 1      2019-02-08-14:54:26:0.95885500
 ## 2                                  NA
 ## 3                                  NA
 ## 4                         Acer rubrum
@@ -111,6 +111,77 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 ## 19                                  0
 ## 20                                  0
 ## 21                                  0</code></pre>
+</div>
+<div id="multiple-species" class="section level1">
+<h1>Multiple species</h1>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co">#First, we'll grab some occurrence records from BIEN</span>
+<span class="kw">library</span>(BIEN)
+
+pima &lt;-<span class="st"> </span><span class="kw">BIEN_occurrence_county</span>(<span class="dt">country =</span> <span class="st">&quot;United States&quot;</span>,<span class="dt">state =</span> <span class="st">&quot;Arizona&quot;</span>,<span class="dt">county =</span> <span class="st">&quot;Pima&quot;</span>, <span class="dt">all.taxonomy =</span> T,<span class="dt">natives.only =</span> F,<span class="dt">native.status =</span> T,<span class="dt">cultivated =</span> T,<span class="dt">political.boundaries =</span> T, <span class="dt">limit =</span> <span class="dv">100</span>)
+
+<span class="co">#The NSR function expects 7 columns as input, however only the fields &quot;species&quot; and &quot;country&quot; need to be populated.</span>
+<span class="co">#If you ever forget, you can use the function NSR_template as a quick lookup, or to populate.</span>
+
+pima_query&lt;-<span class="kw">NSR_template</span>(<span class="dt">nrow =</span> <span class="kw">nrow</span>(pima))
+
+pima_query<span class="op">$</span>family &lt;-<span class="st"> </span>pima<span class="op">$</span>scrubbed_family
+pima_query<span class="op">$</span>species &lt;-<span class="st"> </span>pima<span class="op">$</span>scrubbed_species_binomial
+pima_query<span class="op">$</span>country &lt;-<span class="st"> </span>pima<span class="op">$</span>country
+pima_query<span class="op">$</span>state_province &lt;-<span class="st"> </span>pima<span class="op">$</span>state_province
+pima_query<span class="op">$</span>county_parish &lt;-<span class="st"> </span>pima<span class="op">$</span>county
+
+pima_nsr_results &lt;-<span class="st"> </span><span class="kw">NSR</span>(pima_query)
+
+<span class="kw">head</span>(pima_nsr_results)</code></pre></div>
+<pre><code>##                              job   family genus       species
+## 1 2019-02-08-14:54:28:0.38939700 Pinaceae    NA Abies bifolia
+## 2 2019-02-08-14:54:28:0.38939700 Pinaceae    NA Abies bifolia
+## 3 2019-02-08-14:54:28:0.38939700 Pinaceae    NA Abies bifolia
+## 4 2019-02-08-14:54:28:0.38939700 Pinaceae    NA Abies bifolia
+## 5 2019-02-08-14:54:28:0.38939700 Pinaceae    NA Abies bifolia
+## 6 2019-02-08-14:54:28:0.38939700 Pinaceae    NA Abies bifolia
+##         country state_province   state_province_full county_parish
+## 1 United States        Arizona United States:Arizona          Pima
+## 2 United States        Arizona United States:Arizona          Pima
+## 3 United States        Arizona United States:Arizona          Pima
+## 4 United States        Arizona United States:Arizona          Pima
+## 5 United States        Arizona United States:Arizona          Pima
+## 6 United States        Arizona United States:Arizona          Pima
+##           county_parish_full                poldiv_full   poldiv_type
+## 1 United States:Arizona:Pima United States:Arizona:Pima county_parish
+## 2 United States:Arizona:Pima United States:Arizona:Pima county_parish
+## 3 United States:Arizona:Pima United States:Arizona:Pima county_parish
+## 4 United States:Arizona:Pima United States:Arizona:Pima county_parish
+## 5 United States:Arizona:Pima United States:Arizona:Pima county_parish
+## 6 United States:Arizona:Pima United States:Arizona:Pima county_parish
+##   native_status_country native_status_state_province
+## 1                     A                             
+## 2                     A                             
+## 3                     A                             
+## 4                     A                             
+## 5                     A                             
+## 6                     A                             
+##   native_status_county_parish native_status
+## 1                                         A
+## 2                                         A
+## 3                                         A
+## 4                                         A
+## 5                                         A
+## 6                                         A
+##                    native_status_reason native_status_sources isIntroduced
+## 1 Absent from all checklists for region                  usda            1
+## 2 Absent from all checklists for region                  usda            1
+## 3 Absent from all checklists for region                  usda            1
+## 4 Absent from all checklists for region                  usda            1
+## 5 Absent from all checklists for region                  usda            1
+## 6 Absent from all checklists for region                  usda            1
+##   isCultivatedNSR is_cultivated_taxon user_id
+## 1               0                   0       0
+## 2               0                   0       0
+## 3               0                   0       0
+## 4               0                   0       0
+## 5               0                   0       0
+## 6               0                   0       0</code></pre>
 </div>
 
 
