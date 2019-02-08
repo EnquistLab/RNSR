@@ -1,0 +1,41 @@
+---
+title: "NSR"
+author: "Brian Maitner"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{NSR R package}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+  
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Native Species Resolver
+
+The package `NSR` is designed to interact with the Native Species Resolver Service of the Botanical Information and Ecology Network.  
+
+
+#Installing NSR
+```{r}
+
+library(devtools)
+install_github("EnquistLab/RNSR/NSR")
+
+
+```
+
+#The easiest case: one species in one political division
+
+```{r}
+library(NSR)
+NSR_super_simple(species = "Acer rubrum",
+                 country =  "Canada", 
+                 state_province = "Ontario")
+
+
+```
