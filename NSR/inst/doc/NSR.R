@@ -1,12 +1,12 @@
 ## ----setup, include=FALSE------------------------------------------------
 knitr::opts_chunk$set(echo = TRUE)
 
-## ------------------------------------------------------------------------
-
-library(devtools)
-install_github("EnquistLab/RNSR/NSR")
-
-
+## ---- eval=FALSE---------------------------------------------------------
+#  
+#  library(devtools)
+#  install_github("EnquistLab/RNSR/NSR")
+#  
+#  
 
 ## ------------------------------------------------------------------------
 library(NSR)

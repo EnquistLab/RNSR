@@ -21,7 +21,7 @@ The package `NSR` is designed to interact with the Native Species Resolver Servi
 
 
 #Installing NSR
-```{r}
+```{r, eval=FALSE}
 
 library(devtools)
 install_github("EnquistLab/RNSR/NSR")
