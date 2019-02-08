@@ -19,6 +19,10 @@
 #' }
 NSR_super_simple <- function(species=NULL, country=NULL, state_province=NULL,county_parish=NULL){
   
+  
+  #Check input for odd stuff
+  
+  
   if(length(species) != length(country)){stop("Country and species vectors should be the same length.")}
   
   if(!is.null(state_province)){
@@ -31,61 +35,33 @@ NSR_super_simple <- function(species=NULL, country=NULL, state_province=NULL,cou
     
   }
 
-  
-  #Set output dataframe
-  output<-matrix(nrow = length(species),ncol = 11)
-  output<-as.data.frame(output)
+  #Make template
+  template<-NSR_template(nrow = length(species))
   
   
-  # Base url for NSR Simple API
-  base_url<-"http://bien.nceas.ucsb.edu/bien/apps/nsr/nsr_ws.php?"
+  #Populate fields as needed
+  
+  #Species
+  template$species <- species
+
+    #Country
+      if(!is.null(country)){
+        template$country <- country  
+      }
+  
+  #State
+      if(!is.null(state_province)){
+          template$state_province <- state_province  
+      }
+  
+  #County
+  if(!is.null(county_parish)){
+    template$county_parish <- county_parish  
+  }
   
   
-  for(i in 1:length(species)){
-    
-    species_url<-paste("species=",species[i],sep = "")
-    species_url<-gsub(pattern = " ",replacement = "%20",x = species_url)  
-    
-    #if there is country information, fill it in
-    if(!is.null(country[i])){  
-      country_url<-paste("&country=",country[i],sep = "")
-      #country_url<-gsub(pattern = " ",replacement = "%20",x = country_url)
-    }
-    
-    #if there is state information, fill it in
-    if(!is.null(state_province)){  
-      state_url<-paste("&stateprovince=",state_province[i],sep = "")
-      #state_url<-gsub(pattern = " ",replacement = "%20",x = state_url)
-    }else( state_url <- NULL)
-    
-    
-    #if there is county information, fill it in
-    if(!is.null(county_parish) ){  
-      county_url<-paste("&countyparish=",county_parish[i],sep = "")
-      #county_url<-gsub(pattern = " ",replacement = "%20",x = county_url)
-    }else(county_url<-NULL)
-    
-    
-    #set return format
-    format_url <- "&format=json"
-    
-    
-    #set full URL
-    full_url <- gsub(pattern = " ",replacement = "%20",x =  paste(base_url,species_url,country_url,state_url,county_url,format_url,sep = "") )
-    
-    
-    results_json<-getURL(url = full_url)
-    results <- fromJSON(results_json)
-    results<-t(results[[1]][[1]]$nsr_result)
-    results<-as.data.frame(results)
-    output[i,]<-results
-    
-  } # i loop
+  return(NSR(template))
   
-  colnames(output)<- colnames(results)  
-  
-  
-  return(output)
   
 }
 

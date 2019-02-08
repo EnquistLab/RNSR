@@ -4,7 +4,7 @@
 #' @param occurrence_dataframe A properly formatted dataframe, see http://bien.nceas.ucsb.edu/bien/tools/nsr/batch-mode/
 #' @return Dataframe containing NSR results.
 #' @import RCurl  rjson
-#' @export
+#' @note This function is slower and less informative than the typical NSR. We recommend using the NSR function.
 #' @examples \dontrun{
 #' 
 #' nsr_testfile <- 
@@ -13,7 +13,7 @@
 #' results <- NSR_simple(occurrence_dataframe = nsr_testfile)
 #' 
 #' }
-NSR_simple <- function(occurrence_dataframe){
+.NSR_simple <- function(occurrence_dataframe){
   
   #Set output dataframe
   output<-matrix(nrow = nrow(occurrence_dataframe),ncol = 11)
