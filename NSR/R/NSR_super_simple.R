@@ -26,12 +26,12 @@ NSR_super_simple <- function(species=NULL, country=NULL, state_province=NULL,cou
   if(length(species) != length(country)){stop("Country and species vectors should be the same length.")}
   
   if(!is.null(state_province)){
-    if(length(species) != length(state_province)){stop("State and vectors should be the same length.")}  
+    if(length(species) != length(state_province)){stop("State and species vectors should be the same length.")}  
     
   }
   
   if(!is.null(county_parish)){
-    if(length(species) != length(county_parish)){stop("County and vectors should be the same length.")}  
+    if(length(species) != length(county_parish)){stop("County and species vectors should be the same length.")}  
     
   }
 
