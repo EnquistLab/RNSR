@@ -2,7 +2,7 @@
 #'
 #'NSRS returns information on native status for species within a political region.
 #' @param occurrence_dataframe A properly formatted dataframe, see http://bien.nceas.ucsb.edu/bien/tools/nsr/batch-mode/
-#' @return Dataframe containing NSR results.
+#' @return Dataframe containing NSRS results.
 #' @import RCurl rjson
 #' @export
 #' @examples \dontrun{
