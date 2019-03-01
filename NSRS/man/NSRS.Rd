@@ -10,7 +10,7 @@ NSRS(occurrence_dataframe)
 \item{occurrence_dataframe}{A properly formatted dataframe, see http://bien.nceas.ucsb.edu/bien/tools/nsr/batch-mode/}
 }
 \value{
-Dataframe containing NSR results.
+Dataframe containing NSRS results.
 }
 \description{
 NSRS returns information on native status for species within a political region.

@@ -90,7 +90,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
                  <span class="dt">country =</span>  <span class="st">&quot;Canada&quot;</span>, 
                  <span class="dt">state_province =</span> <span class="st">&quot;Ontario&quot;</span>)</code></pre></div>
 <pre><code>##                               results
-## 1         2019-03-01-9:22:19:03116900
+## 1       2019-03-01-9:26:59:0.61105500
 ## 2                                  NA
 ## 3                                  NA
 ## 4                         Acer rubrum
@@ -115,13 +115,9 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <div id="multiple-species" class="section level1">
 <h1>Multiple species</h1>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co">#First, we'll grab some occurrence records from BIEN</span>
-<span class="kw">library</span>(BIEN)</code></pre></div>
-<pre><code>## Warning: package 'BIEN' was built under R version 3.5.2</code></pre>
-<pre><code>## Loading required package: RPostgreSQL</code></pre>
-<pre><code>## Loading required package: DBI</code></pre>
-<pre><code>## Type vignette(&quot;BIEN&quot;) to get started</code></pre>
-<pre><code>## The BIEN database has been updated to version 4.1 (as of 31-10-2018)!  This version includes nearly twice as many occurrence records and improved validations.</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">pima &lt;-<span class="st"> </span><span class="kw">BIEN_occurrence_county</span>(<span class="dt">country =</span> <span class="st">&quot;United States&quot;</span>,<span class="dt">state =</span> <span class="st">&quot;Arizona&quot;</span>,<span class="dt">county =</span> <span class="st">&quot;Pima&quot;</span>, <span class="dt">all.taxonomy =</span> T,<span class="dt">natives.only =</span> F,<span class="dt">native.status =</span> T,<span class="dt">cultivated =</span> T,<span class="dt">political.boundaries =</span> T, <span class="dt">limit =</span> <span class="dv">100</span>)
+<span class="kw">library</span>(BIEN)
+
+pima &lt;-<span class="st"> </span><span class="kw">BIEN_occurrence_county</span>(<span class="dt">country =</span> <span class="st">&quot;United States&quot;</span>,<span class="dt">state =</span> <span class="st">&quot;Arizona&quot;</span>,<span class="dt">county =</span> <span class="st">&quot;Pima&quot;</span>, <span class="dt">all.taxonomy =</span> T,<span class="dt">natives.only =</span> F,<span class="dt">native.status =</span> T,<span class="dt">cultivated =</span> T,<span class="dt">political.boundaries =</span> T, <span class="dt">limit =</span> <span class="dv">100</span>)
 
 <span class="co">#The NSRS function expects 7 columns as input, however only the fields &quot;species&quot; and &quot;country&quot; need to be populated.</span>
 <span class="co">#If you ever forget, you can use the function NSRS_template as a quick lookup, or to populate.</span>
@@ -137,13 +133,13 @@ pima_query<span class="op">$</span>county_parish &lt;-<span class="st"> </span>p
 pima_nsrs_results &lt;-<span class="st"> </span><span class="kw">NSRS</span>(pima_query)
 
 <span class="kw">head</span>(pima_nsrs_results)</code></pre></div>
-<pre><code>##                             job   family genus       species       country
-## 1 2019-03-01-9:22:20:0.92964200 Pinaceae    NA Abies bifolia United States
-## 2 2019-03-01-9:22:20:0.92964200 Pinaceae    NA Abies bifolia United States
-## 3 2019-03-01-9:22:20:0.92964200 Pinaceae    NA Abies bifolia United States
-## 4 2019-03-01-9:22:20:0.92964200 Pinaceae    NA Abies bifolia United States
-## 5 2019-03-01-9:22:20:0.92964200 Pinaceae    NA Abies bifolia United States
-## 6 2019-03-01-9:22:20:0.92964200 Pinaceae    NA Abies bifolia United States
+<pre><code>##                           job   family genus       species       country
+## 1 2019-03-01-9:27:00:00421300 Pinaceae    NA Abies bifolia United States
+## 2 2019-03-01-9:27:00:00421300 Pinaceae    NA Abies bifolia United States
+## 3 2019-03-01-9:27:00:00421300 Pinaceae    NA Abies bifolia United States
+## 4 2019-03-01-9:27:00:00421300 Pinaceae    NA Abies bifolia United States
+## 5 2019-03-01-9:27:00:00421300 Pinaceae    NA Abies bifolia United States
+## 6 2019-03-01-9:27:00:00421300 Pinaceae    NA Abies bifolia United States
 ##   state_province   state_province_full county_parish
 ## 1        Arizona United States:Arizona          Pima
 ## 2        Arizona United States:Arizona          Pima
