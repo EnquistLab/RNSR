@@ -1,15 +1,15 @@
 #'Check the native status for plant species in a political region
 #'
-#'NSR returns information on native status for species within a political region.
+#'NSRS returns information on native status for species within a political region.
 #' @param occurrence_dataframe A properly formatted dataframe, see http://bien.nceas.ucsb.edu/bien/tools/nsr/batch-mode/
 #' @return Dataframe containing NSR results.
 #' @import RCurl rjson
 #' @export
 #' @examples \dontrun{
-#' nsr_testfile <- 
+#' nsrs_testfile <- 
 #'read.csv("http://bien.nceas.ucsb.edu/bien/wp-content/uploads/2019/02/nsr_testfile.csv")
 #'
-#' results <- NSR(occurrence_dataframe = nsr_testfile)
+#' results <- NSRS(occurrence_dataframe = nsrs_testfile)
 #'   
 #' # Inspect the results
 #' head(results, 10)
@@ -30,7 +30,7 @@
 #' 
 #' 
 #' }
-NSR <- function(occurrence_dataframe){
+NSRS <- function(occurrence_dataframe){
   
 # Base url for NSR Batch API
 url <- "http://bien.nceas.ucsb.edu/bien/apps/nsr/nsr_wsb.php"

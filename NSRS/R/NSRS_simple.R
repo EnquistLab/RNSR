@@ -1,19 +1,19 @@
 #'Check the native status for plant species in a political region
 #'
-#'NSR_simple returns information on native status for species within a political region.
+#'.NSRS_simple returns information on native status for species within a political region.
 #' @param occurrence_dataframe A properly formatted dataframe, see http://bien.nceas.ucsb.edu/bien/tools/nsr/batch-mode/
-#' @return Dataframe containing NSR results.
+#' @return Dataframe containing NSRS results.
 #' @import RCurl  rjson
-#' @note This function is slower and less informative than the typical NSR. We recommend using the NSR function.
+#' @note This function is slower and less informative than the typical NSRS. We recommend using the NSRS function.
 #' @examples \dontrun{
 #' 
-#' nsr_testfile <- 
+#' nsrs_testfile <- 
 #' read.csv("http://bien.nceas.ucsb.edu/bien/wp-content/uploads/2019/02/nsr_testfile.csv")
 #'
-#' results <- NSR_simple(occurrence_dataframe = nsr_testfile)
+#' results <- NSRS_simple(occurrence_dataframe = nsrs_testfile)
 #' 
 #' }
-.NSR_simple <- function(occurrence_dataframe){
+.NSRS_simple <- function(occurrence_dataframe){
   
   #Set output dataframe
   output<-matrix(nrow = nrow(occurrence_dataframe),ncol = 11)

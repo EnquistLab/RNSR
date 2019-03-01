@@ -1,12 +1,12 @@
-#' NSR: Tools for accessing the Native Species Resolver (NSR).
+#' NSRS: Tools for accessing the Native Species Resolution Service (NSRS).
 #'
-#' @description The Native Species Resolver (NSR) R package provides access to the NSR service as well as other associated tools.
+#' @description The Native Species Resolution Service (NSRS) R package provides access to the NSRS as well as other associated tools.
 #' 
 #' @section Getting started:
-#' Type vignette("NSR") to view the vignette, which contains useful information on the NSR package.
+#' Type vignette("NSRS") to view the vignette, which contains useful information on the NSR package.
 #' 
 #' @references Enquist, B.J., Sandel, B., Boyle, B., Donoghue II, J.C., Regetz, J., Svenning, J.C., McGill, B.J., Peet, R.K., Jorgensen, P.M., Condit, R., Thiers, B., Schildhauer, M., Smith, S.A., Hinchliff, C.E., Wiser, S.K., Violle, C., Simova, I., Spencer, N., Dolins, S., Morueta-Holme, N., Marcuse-Kubitza, A., Kraft, N.J.B., Ott, J.E., Andelman, S., ter Steege, H., Phillips, O., Sloat, L.L., Narro, M.L., Casler, N., Guaderama, D.,  Merow, C., Maitner, B.S. (in prep) A general signature of taxonomic and phylogenetic diversity across the Land Plants of the New World.
 #' 
 #' @docType package
-#' @name NSR
-#' @aliases NSR-package
+#' @name NSRS
+#' @aliases NSRS-package
