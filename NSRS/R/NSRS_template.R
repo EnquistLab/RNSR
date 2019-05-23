@@ -17,9 +17,9 @@
 NSRS_template <- function(nrow=1){
   
   
-  template<-matrix(nrow = nrow, ncol= 7)
+  template<-matrix(nrow = nrow, ncol= 6)
   template<-as.data.frame(template)
-  colnames(template)<-c("family","genus","species","country","state_province","county_parish","user_id")      
+  colnames(template)<-c("family","species","country","state_province","county_parish","user_id")      
   return(template)  
   
 }

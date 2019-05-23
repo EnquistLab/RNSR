@@ -32,35 +32,30 @@
 #' }
 NSRS <- function(occurrence_dataframe){
   
-# Base url for NSR Batch API
-url <- "http://bien.nceas.ucsb.edu/bien/apps/nsr/nsr_wsb.php"
+  # Base url for NSR Batch API
+  url <- "http://bien.nceas.ucsb.edu/bien/apps/nsr/nsr_wsb.php"
   
-# Convert to JSON
-obs_json <- toJSON(unname(split(occurrence_dataframe, 1:nrow(occurrence_dataframe))))
-
-# Construct the request
-headers <- list('Accept' = 'application/json', 'Content-Type' = 'application/json', 'charset' = 'UTF-8')
-
-results_json <- postForm(url, .opts=list(postfields=obs_json, httpheader=headers))
-
-# Give the input file name to the function.
-results <- fromJSON(results_json)
-
-# Convert JSON file to a data frame
-# This takes a bit of work
-results <- as.data.frame(results)	# Convert to dataframe
-
-results <- t(results)	# Transpose
-
-colnames(results) = results[1,] # Get header names from first row
-
-results = results[-1, ] # Remove the first row.
-
-results <- as.data.frame(results)	# Convert to dataframe (again)
-
-rownames(results) <- NULL	# Reset row numbers
-
-return(results)
+  # Convert to JSON
+  obs_json <- toJSON(unname(split(occurrence_dataframe, 1:nrow(occurrence_dataframe))))
+  
+  # Construct the request
+  headers <- list('Accept' = 'application/json', 'Content-Type' = 'application/json', 'charset' = 'UTF-8')
+  
+  results_json <- postForm(url, .opts=list(postfields=obs_json, httpheader=headers))
+  
+  # Give the input file name to the function.
+  results <- fromJSON(results_json)
+  
+  # Convert JSON file to a data frame
+  # This takes a bit of work
+  results <- as.data.frame(results)	# Convert to dataframe
+  rownames(results)<-results[,1]# Get header names from first row
+  results<-t(results)# Transpose
+  results <- as.data.frame(results)	# Convert to dataframe (again)
+  results = results[-1, ] # Remove the first row.
+  rownames(results) <- NULL	# Reset row numbers
+  
+  return(results)
   
 }
 
