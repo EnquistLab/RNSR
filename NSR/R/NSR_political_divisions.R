@@ -26,6 +26,8 @@ NSR_political_divisions <- function(country = NULL, checklist = T){
   #add country (optionally)
   
   if(!is.null(country)){url<-paste(url,"&country=",country,sep = "") }
+  url<-gsub(pattern = " ",replacement = "%20",x = url)
+  
   
   #add checklist
   
@@ -46,6 +48,10 @@ NSR_political_divisions <- function(country = NULL, checklist = T){
   
   results <- fromJSON(results_json,simplify = T)
   
+  #If there were no results returned, print a message.  Otherwise, format the results and return them
+  if(length(results$nsr_results)==0){message("Country not found")}else{
+  
+  
   #Convert lists into a dataframe
   output<-data.frame(matrix(unlist(results), nrow=length(results[[1]]), byrow=T),stringsAsFactors=FALSE)
   
@@ -54,5 +60,5 @@ NSR_political_divisions <- function(country = NULL, checklist = T){
   
   #Return the metadata, now properly formatted
   return(output)
-  
+  }
 }
