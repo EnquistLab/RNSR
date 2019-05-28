@@ -1,11 +1,11 @@
-Package: NSRS
-Title: Tools to Access the Native Species Resolution Service
+Package: NSR
+Title: Tools to Access the Native Species Resolver
 Version: 0.0.0.9000
 Authors@R: c(
             person("Brad", "Boyle", email = "bboyle@email.arizona.edu", role = c("aut", "cre")),
             person("Brian", "Maitner", email = "bmaitner@gmail.com", role = c("aut"))
             )
-Description: Provides tools for interacting with the Native Species Resolution Service (NSRS) API and associated functionality.
+Description: Provides tools for interacting with the Native Species Resolver (NSR) API and associated functionality.
 Depends: 
         R (>= 3.4.0)
 License: MIT + file LICENSE

@@ -1,23 +1,23 @@
 #'Check the native status for plant species in a political region
 #'
-#'NSRS_super_simple returns information on native status for species within a political region.
+#'NSR_super_simple returns information on native status for species within a political region.
 #' @param species A single species or a vector of species, with genus and specific epithet separated by a space.
 #' @param country A single country or a vector of countries.  If a vector, length must equal length of species vector.
 #' @param state_province A single state/province or a vector of states.  If a vector, length must equal length of species vector.
 #' @param county_parish A single county/parish or a vector of counties.  If a vector, length must equal length of species vector.
-#' @return Dataframe containing NSRS results.
+#' @return Dataframe containing NSR results.
 #' @import RCurl  rjson
 #' @export
 #' @examples \dontrun{
 #' 
-#' results <- NSRS_super_simple(species = "Acer rubrum",
+#' results <- NSR_super_simple(species = "Acer rubrum",
 #'            country = "Canada",state_province = "Ontario")
 #' 
-#' results <- NSRS_super_simple(species = c("Acer rubrum", "Aspen tremuloides") , 
+#' results <- NSR_super_simple(species = c("Acer rubrum", "Aspen tremuloides") , 
 #'            country = c("Canada","Canada"),state_province = c("Ontario","Ontario"))
 #' 
 #' }
-NSRS_super_simple <- function(species=NULL, country=NULL, state_province=NULL,county_parish=NULL){
+NSR_super_simple <- function(species=NULL, country=NULL, state_province=NULL,county_parish=NULL){
   
   
   #Check input for odd stuff
@@ -36,7 +36,7 @@ NSRS_super_simple <- function(species=NULL, country=NULL, state_province=NULL,co
   }
 
   #Make template
-  template<-NSRS_template(nrow = length(species))
+  template<-NSR_template(nrow = length(species))
   
   
   #Populate fields as needed
@@ -60,7 +60,7 @@ NSRS_super_simple <- function(species=NULL, country=NULL, state_province=NULL,co
   }
   
   
-  return(NSRS(template))
+  return(NSR(template))
   
   
 }

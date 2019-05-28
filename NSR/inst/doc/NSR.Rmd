@@ -1,5 +1,5 @@
 ---
-title: "NSRS"
+title: "NSR"
 author: "Brian Maitner"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
@@ -15,16 +15,16 @@ vignette: >
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## Native Species Resolution Service
+## Native Species Resolver
 
-The package `NSRS` is designed to interact with the Native Species Resolution Service of the Botanical Information and Ecology Network.  
+The package `NSR` is designed to interact with the Native Species Resolver of the Botanical Information and Ecology Network.  
 
 
 #Installing NSRS
 ```{r, eval=FALSE}
 
 library(devtools)
-install_github("EnquistLab/RNSRS/NSRS")
+install_github("EnquistLab/RNSR/NSR")
 
 
 ```
@@ -32,8 +32,8 @@ install_github("EnquistLab/RNSRS/NSRS")
 #The easiest case: one species in one political division
 
 ```{r}
-library(NSRS)
-NSRS_super_simple(species = "Acer rubrum",
+library(NSR)
+NSR_super_simple(species = "Acer rubrum",
                  country =  "Canada", 
                  state_province = "Ontario")
 
@@ -60,8 +60,8 @@ pima_query$country <- pima$country
 pima_query$state_province <- pima$state_province
 pima_query$county_parish <- pima$county
 
-pima_nsrs_results <- NSRS(pima_query)
+pima_nsr_results <- NSR(pima_query)
 
-head(pima_nsrs_results)
+head(pima_nsr_results)
 
 ```

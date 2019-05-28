@@ -1,20 +1,20 @@
-#'Make a template for an NSRS query
+#'Make a template for an NSR query
 #'
-#'NSRS_template builds a template that can be populated to submit an NSRS query.
+#'NSR_template builds a template that can be populated to submit an NSR query.
 #' @param nrow The number of rows to include in the template
-#' @return Template data.frame that can be populated and then used in NSRS queries.
+#' @return Template data.frame that can be populated and then used in NSR queries.
 #' @export
 #' @examples \dontrun{
 #' 
-#' template<-NSRS_template(nrow = 2)
+#' template<-NSR_template(nrow = 2)
 #' template$genus<-"Acer"
 #' template$species<-c("Acer rubrum", "Acer saccharum")
 #' template$country<-"Canada"
 #' template$user_id<-1:2
-#' results <- NSRS(occurrence_dataframe = template)
+#' results <- NSR(occurrence_dataframe = template)
 #' 
 #' }
-NSRS_template <- function(nrow=1){
+NSR_template <- function(nrow=1){
   
   
   template<-matrix(nrow = nrow, ncol= 6)

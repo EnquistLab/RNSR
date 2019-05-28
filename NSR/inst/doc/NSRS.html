@@ -12,7 +12,7 @@
 
 <meta name="author" content="Brian Maitner" />
 
-<meta name="date" content="2019-03-01" />
+<meta name="date" content="2019-05-28" />
 
 <title>NSRS</title>
 
@@ -70,7 +70,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 
 <h1 class="title toc-ignore">NSRS</h1>
 <h4 class="author"><em>Brian Maitner</em></h4>
-<h4 class="date"><em>2019-03-01</em></h4>
+<h4 class="date"><em>2019-05-28</em></h4>
 
 
 
@@ -89,35 +89,39 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <span class="kw">NSRS_super_simple</span>(<span class="dt">species =</span> <span class="st">&quot;Acer rubrum&quot;</span>,
                  <span class="dt">country =</span>  <span class="st">&quot;Canada&quot;</span>, 
                  <span class="dt">state_province =</span> <span class="st">&quot;Ontario&quot;</span>)</code></pre></div>
-<pre><code>##                               results
-## 1       2019-03-01-9:26:59:0.61105500
-## 2                                  NA
-## 3                                  NA
-## 4                         Acer rubrum
-## 5                              Canada
-## 6                             Ontario
-## 7                      Canada:Ontario
-## 8                                  NA
-## 9                   Canada:Ontario:NA
-## 10                  Canada:Ontario:NA
-## 11                      county_parish
-## 12                                  N
-## 13                                  N
-## 14                                   
-## 15                                  N
-## 16 Native to region, as per checklist
-## 17                             vascan
-## 18                                  0
-## 19                                  0
-## 20                                  0
-## 21                                  0</code></pre>
+<pre><code>##                                                    results
+## 1                           2019-05-28-11:00:30:0.33294500
+## 2                                                         
+## 3                                                       NA
+## 4                                                       NA
+## 5                                              Acer rubrum
+## 6                                                   Canada
+## 7                                       Acer rubrum:Canada
+## 8                                                  Ontario
+## 9                               Acer rubrum:Canada:Ontario
+## 10                              Acer rubrum:Canada:Ontario
+## 11                                           county_parish
+## 12                                                        
+## 13                                                        
+## 14                                                        
+## 15                                                     UNK
+## 16 Status unknown, no checklists for region of observation
+## 17                                                        
+## 18                                                        
+## 19                                                       0
+## 20                                                       0
+## 21                                                       0</code></pre>
 </div>
 <div id="multiple-species" class="section level1">
 <h1>Multiple species</h1>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co">#First, we'll grab some occurrence records from BIEN</span>
-<span class="kw">library</span>(BIEN)
-
-pima &lt;-<span class="st"> </span><span class="kw">BIEN_occurrence_county</span>(<span class="dt">country =</span> <span class="st">&quot;United States&quot;</span>,<span class="dt">state =</span> <span class="st">&quot;Arizona&quot;</span>,<span class="dt">county =</span> <span class="st">&quot;Pima&quot;</span>, <span class="dt">all.taxonomy =</span> T,<span class="dt">natives.only =</span> F,<span class="dt">native.status =</span> T,<span class="dt">cultivated =</span> T,<span class="dt">political.boundaries =</span> T, <span class="dt">limit =</span> <span class="dv">100</span>)
+<span class="kw">library</span>(BIEN)</code></pre></div>
+<pre><code>## Warning: package 'BIEN' was built under R version 3.5.3</code></pre>
+<pre><code>## Loading required package: RPostgreSQL</code></pre>
+<pre><code>## Loading required package: DBI</code></pre>
+<pre><code>## Type vignette(&quot;BIEN&quot;) to get started</code></pre>
+<pre><code>## The BIEN database has been updated to version 4.1 (as of 31-10-2018)!  This version includes nearly twice as many occurrence records and improved validations.</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">pima &lt;-<span class="st"> </span><span class="kw">BIEN_occurrence_county</span>(<span class="dt">country =</span> <span class="st">&quot;United States&quot;</span>,<span class="dt">state =</span> <span class="st">&quot;Arizona&quot;</span>,<span class="dt">county =</span> <span class="st">&quot;Pima&quot;</span>, <span class="dt">all.taxonomy =</span> T,<span class="dt">natives.only =</span> F,<span class="dt">native.status =</span> T,<span class="dt">cultivated =</span> T,<span class="dt">political.boundaries =</span> T, <span class="dt">limit =</span> <span class="dv">100</span>)
 
 <span class="co">#The NSRS function expects 7 columns as input, however only the fields &quot;species&quot; and &quot;country&quot; need to be populated.</span>
 <span class="co">#If you ever forget, you can use the function NSRS_template as a quick lookup, or to populate.</span>
@@ -133,55 +137,62 @@ pima_query<span class="op">$</span>county_parish &lt;-<span class="st"> </span>p
 pima_nsrs_results &lt;-<span class="st"> </span><span class="kw">NSRS</span>(pima_query)
 
 <span class="kw">head</span>(pima_nsrs_results)</code></pre></div>
-<pre><code>##                           job   family genus       species       country
-## 1 2019-03-01-9:27:00:00421300 Pinaceae    NA Abies bifolia United States
-## 2 2019-03-01-9:27:00:00421300 Pinaceae    NA Abies bifolia United States
-## 3 2019-03-01-9:27:00:00421300 Pinaceae    NA Abies bifolia United States
-## 4 2019-03-01-9:27:00:00421300 Pinaceae    NA Abies bifolia United States
-## 5 2019-03-01-9:27:00:00421300 Pinaceae    NA Abies bifolia United States
-## 6 2019-03-01-9:27:00:00421300 Pinaceae    NA Abies bifolia United States
-##   state_province   state_province_full county_parish
-## 1        Arizona United States:Arizona          Pima
-## 2        Arizona United States:Arizona          Pima
-## 3        Arizona United States:Arizona          Pima
-## 4        Arizona United States:Arizona          Pima
-## 5        Arizona United States:Arizona          Pima
-## 6        Arizona United States:Arizona          Pima
-##           county_parish_full                poldiv_full   poldiv_type
-## 1 United States:Arizona:Pima United States:Arizona:Pima county_parish
-## 2 United States:Arizona:Pima United States:Arizona:Pima county_parish
-## 3 United States:Arizona:Pima United States:Arizona:Pima county_parish
-## 4 United States:Arizona:Pima United States:Arizona:Pima county_parish
-## 5 United States:Arizona:Pima United States:Arizona:Pima county_parish
-## 6 United States:Arizona:Pima United States:Arizona:Pima county_parish
-##   native_status_country native_status_state_province
-## 1                     A                             
-## 2                     A                             
-## 3                     A                             
-## 4                     A                             
-## 5                     A                             
-## 6                     A                             
+<pre><code>##                              job family genus species       country
+## 1 2019-05-28-11:02:05:0.50284100           NA      NA Abies bifolia
+## 2 2019-05-28-11:02:05:0.50284100           NA      NA Abies bifolia
+## 3 2019-05-28-11:02:05:0.50284100           NA      NA Abies bifolia
+## 4 2019-05-28-11:02:05:0.50284100           NA      NA Abies bifolia
+## 5 2019-05-28-11:02:05:0.50284100           NA      NA Abies bifolia
+## 6 2019-05-28-11:02:05:0.50284100           NA      NA Abies bifolia
+##   state_province         state_province_full county_parish
+## 1  United States Abies bifolia:United States       Arizona
+## 2  United States Abies bifolia:United States       Arizona
+## 3  United States Abies bifolia:United States       Arizona
+## 4  United States Abies bifolia:United States       Arizona
+## 5  United States Abies bifolia:United States       Arizona
+## 6  United States Abies bifolia:United States       Arizona
+##                    county_parish_full                         poldiv_full
+## 1 Abies bifolia:United States:Arizona Abies bifolia:United States:Arizona
+## 2 Abies bifolia:United States:Arizona Abies bifolia:United States:Arizona
+## 3 Abies bifolia:United States:Arizona Abies bifolia:United States:Arizona
+## 4 Abies bifolia:United States:Arizona Abies bifolia:United States:Arizona
+## 5 Abies bifolia:United States:Arizona Abies bifolia:United States:Arizona
+## 6 Abies bifolia:United States:Arizona Abies bifolia:United States:Arizona
+##     poldiv_type native_status_country native_status_state_province
+## 1 county_parish                                                   
+## 2 county_parish                                                   
+## 3 county_parish                                                   
+## 4 county_parish                                                   
+## 5 county_parish                                                   
+## 6 county_parish                                                   
 ##   native_status_county_parish native_status
-## 1                                         A
-## 2                                         A
-## 3                                         A
-## 4                                         A
-## 5                                         A
-## 6                                         A
-##                    native_status_reason native_status_sources isIntroduced
-## 1 Absent from all checklists for region                  usda            1
-## 2 Absent from all checklists for region                  usda            1
-## 3 Absent from all checklists for region                  usda            1
-## 4 Absent from all checklists for region                  usda            1
-## 5 Absent from all checklists for region                  usda            1
-## 6 Absent from all checklists for region                  usda            1
-##   isCultivatedNSR is_cultivated_taxon user_id
-## 1               0                   0       0
-## 2               0                   0       0
-## 3               0                   0       0
-## 4               0                   0       0
-## 5               0                   0       0
-## 6               0                   0       0</code></pre>
+## 1                                       UNK
+## 2                                       UNK
+## 3                                       UNK
+## 4                                       UNK
+## 5                                       UNK
+## 6                                       UNK
+##                                      native_status_reason
+## 1 Status unknown, no checklists for region of observation
+## 2 Status unknown, no checklists for region of observation
+## 3 Status unknown, no checklists for region of observation
+## 4 Status unknown, no checklists for region of observation
+## 5 Status unknown, no checklists for region of observation
+## 6 Status unknown, no checklists for region of observation
+##   native_status_sources isIntroduced isCultivatedNSR is_cultivated_taxon
+## 1                                                  0                   0
+## 2                                                  0                   0
+## 3                                                  0                   0
+## 4                                                  0                   0
+## 5                                                  0                   0
+## 6                                                  0                   0
+##   user_id
+## 1       0
+## 2       0
+## 3       0
+## 4       0
+## 5       0
+## 6       0</code></pre>
 </div>
 
 
