@@ -4,7 +4,10 @@
 \alias{NSR_metadata}
 \title{Get metadata on NSR sources}
 \usage{
-NSR_metadata()
+NSR_metadata(...)
+}
+\arguments{
+\item{...}{Additional parameters passed to internal functions.}
 }
 \value{
 data.frame containing NSR source metadata

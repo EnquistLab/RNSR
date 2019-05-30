@@ -12,7 +12,7 @@
 
 <meta name="author" content="Brian Maitner" />
 
-<meta name="date" content="2019-05-28" />
+<meta name="date" content="2019-05-30" />
 
 <title>NSR</title>
 
@@ -70,7 +70,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 
 <h1 class="title toc-ignore">NSR</h1>
 <h4 class="author"><em>Brian Maitner</em></h4>
-<h4 class="date"><em>2019-05-28</em></h4>
+<h4 class="date"><em>2019-05-30</em></h4>
 
 
 
@@ -89,10 +89,8 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <span class="kw">NSR_super_simple</span>(<span class="dt">species =</span> <span class="st">&quot;Acer rubrum&quot;</span>,
                  <span class="dt">country =</span>  <span class="st">&quot;Canada&quot;</span>, 
                  <span class="dt">state_province =</span> <span class="st">&quot;Ontario&quot;</span>)</code></pre></div>
-<pre><code>##                            job family genus     species country
-## 1 2019-05-28-16:09:28:09096900              Acer rubrum  Canada
-##   state_province state_province_full county_parish county_parish_full
-## 1        Ontario      Canada:Ontario            NA  Canada:Ontario:NA
+<pre><code>##        family genus     species country state_province county_parish
+## 1 Sapindaceae  Acer Acer rubrum  Canada        Ontario            NA
 ##         poldiv_full   poldiv_type native_status_country
 ## 1 Canada:Ontario:NA county_parish                     N
 ##   native_status_state_province native_status_county_parish native_status
@@ -123,41 +121,27 @@ pima_query<span class="op">$</span>county_parish &lt;-<span class="st"> </span>p
 pima_nsr_results &lt;-<span class="st"> </span><span class="kw">NSR</span>(pima_query)
 
 <span class="kw">head</span>(pima_nsr_results)</code></pre></div>
-<pre><code>##                              job family genus       species       country
-## 1 2019-05-28-16:10:17:0.67549300              Abies bifolia United States
-## 2 2019-05-28-16:10:17:0.67549300              Abies bifolia United States
-## 3 2019-05-28-16:10:17:0.67549300              Abies bifolia United States
-## 4 2019-05-28-16:10:17:0.67549300              Abies bifolia United States
-## 5 2019-05-28-16:10:17:0.67549300              Abies bifolia United States
-## 6 2019-05-28-16:10:17:0.67549300              Abies bifolia United States
-##   state_province   state_province_full county_parish
-## 1        Arizona United States:Arizona          Pima
-## 2        Arizona United States:Arizona          Pima
-## 3        Arizona United States:Arizona          Pima
-## 4        Arizona United States:Arizona          Pima
-## 5        Arizona United States:Arizona          Pima
-## 6        Arizona United States:Arizona          Pima
-##           county_parish_full                poldiv_full   poldiv_type
-## 1 United States:Arizona:Pima United States:Arizona:Pima county_parish
-## 2 United States:Arizona:Pima United States:Arizona:Pima county_parish
-## 3 United States:Arizona:Pima United States:Arizona:Pima county_parish
-## 4 United States:Arizona:Pima United States:Arizona:Pima county_parish
-## 5 United States:Arizona:Pima United States:Arizona:Pima county_parish
-## 6 United States:Arizona:Pima United States:Arizona:Pima county_parish
-##   native_status_country native_status_state_province
-## 1                     A                             
-## 2                     A                             
-## 3                     A                             
-## 4                     A                             
-## 5                     A                             
-## 6                     A                             
-##   native_status_county_parish native_status
-## 1                                         A
-## 2                                         A
-## 3                                         A
-## 4                                         A
-## 5                                         A
-## 6                                         A
+<pre><code>##     family genus       species       country state_province county_parish
+## 1 Pinaceae Abies Abies bifolia United States        Arizona          Pima
+## 2 Pinaceae Abies Abies bifolia United States        Arizona          Pima
+## 3 Pinaceae Abies Abies bifolia United States        Arizona          Pima
+## 4 Pinaceae Abies Abies bifolia United States        Arizona          Pima
+## 5 Pinaceae Abies Abies bifolia United States        Arizona          Pima
+## 6 Pinaceae Abies Abies bifolia United States        Arizona          Pima
+##                  poldiv_full   poldiv_type native_status_country
+## 1 United States:Arizona:Pima county_parish                     A
+## 2 United States:Arizona:Pima county_parish                     A
+## 3 United States:Arizona:Pima county_parish                     A
+## 4 United States:Arizona:Pima county_parish                     A
+## 5 United States:Arizona:Pima county_parish                     A
+## 6 United States:Arizona:Pima county_parish                     A
+##   native_status_state_province native_status_county_parish native_status
+## 1                            A                                         A
+## 2                            A                                         A
+## 3                            A                                         A
+## 4                            A                                         A
+## 5                            A                                         A
+## 6                            A                                         A
 ##                    native_status_reason native_status_sources isIntroduced
 ## 1 Absent from all checklists for region                  usda            1
 ## 2 Absent from all checklists for region                  usda            1

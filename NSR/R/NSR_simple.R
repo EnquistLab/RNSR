@@ -2,6 +2,7 @@
 #'
 #'.NSR_simple returns information on native status for species within a political region.
 #' @param occurrence_dataframe A properly formatted dataframe, see http://bien.nceas.ucsb.edu/bien/tools/nsr/batch-mode/
+#' @param ... Additional parameters passed to internal functions.
 #' @return Dataframe containing NSR results.
 #' @import RCurl  rjson
 #' @note This function is slower and less informative than the typical NSR. We recommend using the NSR function.
@@ -10,10 +11,10 @@
 #' nsr_testfile <- 
 #' read.csv("http://bien.nceas.ucsb.edu/bien/wp-content/uploads/2019/02/nsr_testfile.csv")
 #'
-#' results <- NSR_simple(occurrence_dataframe = nsr_testfile)
+#' results <- .NSR_simple(occurrence_dataframe = nsr_testfile)
 #' 
 #' }
-.NSR_simple <- function(occurrence_dataframe){
+.NSR_simple <- function(occurrence_dataframe,...){
   
   #Set output dataframe
   output<-matrix(nrow = nrow(occurrence_dataframe),ncol = 11)
@@ -56,8 +57,18 @@
   #set full URL
   full_url <- gsub(pattern = " ",replacement = "%20",x =  paste(base_url,species_url,country_url,state_url,county_url,format_url,sep = "") )
   
+  #Get metadata in json format
+  results_json <- .handle_url(url = full_url,...)
   
-  results_json <- getURL(url = full_url)
+  if(grepl(pattern = "http://bien.nceas.ucsb.edu",x = results_json)){return(results_json)}
+  
+  #Convert NULLs to NAs
+  results_json<-gsub(pattern = "null",replacement = '\"\"',x = results_json)
+  
+  
+  #results_json <- getURL(url = full_url)
+  
+  
   results <- fromJSON(results_json)
   results<-t(results[[1]][[1]]$nsr_result)
   results<-as.data.frame(results)
