@@ -3,6 +3,7 @@
 #'NSR_political_divisions returns metadata on the sources used by the NSR.
 #' @param country (optional) Character. Limits results to sources for a single country
 #' @param checklist If TRUE (the default) limits the result to political divisions represented by one or more comprehensive checklists.
+#' @param ... Additional parameters passed to internal functions.
 #' @return data.frame containing information on political divisions within the NSR database.
 #' @note Setting checklist to FALSE returns a list of political divisions that can be to standardize spellings.
 #' @export
@@ -19,7 +20,7 @@
 #' nsr_checklists_canada <- NSR_political_divisions(country = "Canada")
 #'  
 #' }
-NSR_political_divisions <- function(country = NULL, checklist = T){
+NSR_political_divisions <- function(country = NULL, checklist = T, ...){
 
   url <- "http://bien.nceas.ucsb.edu/bien/apps/nsr/nsr_ws.php?do=poldivs"
   
@@ -37,9 +38,9 @@ NSR_political_divisions <- function(country = NULL, checklist = T){
   #specify json
   url<-paste(url, "&format=json",sep = "")
   
-
   #Get metadata in json format
-  results_json <- getURL(url = url)
+  results_json <- .handle_url(url = url,...)
+  if(grepl(pattern = "http://bien.nceas.ucsb.edu",x = results_json)){return(results_json)}
   
   #Convert NULLs to NAs
   results_json<-gsub(pattern = "null",replacement = '\"\"',x = results_json)

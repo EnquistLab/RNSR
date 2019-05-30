@@ -4,12 +4,14 @@
 \alias{NSR_political_divisions}
 \title{Get information on checklists within the NSR}
 \usage{
-NSR_political_divisions(country = NULL, checklist = T)
+NSR_political_divisions(country = NULL, checklist = T, ...)
 }
 \arguments{
 \item{country}{(optional) Character. Limits results to sources for a single country}
 
 \item{checklist}{If TRUE (the default) limits the result to political divisions represented by one or more comprehensive checklists.}
+
+\item{...}{Additional parameters passed to internal functions.}
 }
 \value{
 data.frame containing information on political divisions within the NSR database.
