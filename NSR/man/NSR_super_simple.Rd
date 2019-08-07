@@ -4,8 +4,8 @@
 \alias{NSR_super_simple}
 \title{Check the native status for plant species in a political region}
 \usage{
-NSR_super_simple(species = NULL, country = NULL, state_province = NULL,
-  county_parish = NULL)
+NSR_super_simple(species = NULL, country = NULL,
+  state_province = NULL, county_parish = NULL)
 }
 \arguments{
 \item{species}{A single species or a vector of species, with genus and specific epithet separated by a space.}
