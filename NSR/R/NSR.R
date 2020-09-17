@@ -2,6 +2,7 @@
 #'
 #'NSR returns information on native status for species within a political region.
 #' @param occurrence_dataframe A properly formatted dataframe, see http://bien.nceas.ucsb.edu/bien/tools/nsr/batch-mode/
+#' @param mode Character. "resolve" returns information on native status.
 #' @return Dataframe containing NSR results.
 #' @import RCurl rjson
 #' @export
@@ -30,25 +31,54 @@
 #' 
 #' 
 #' }
-NSR <- function(occurrence_dataframe){
+NSR <- function(occurrence_dataframe,mode="resolve"){
   
   # Base url for NSR Batch API
-  url <- "http://bien.nceas.ucsb.edu/bien/apps/nsr/nsr_wsb.php"
+  #url <- "http://bien.nceas.ucsb.edu/bien/apps/nsr/nsr_wsb.php"
+  #url <- "https://nsrapi.xyz/nsr_wsb.php"
+  url = "https://bien.nceas.ucsb.edu/nsrdev/nsr_wsb.php"		# Development (nimoy)
   
   # Convert to JSON
-  obs_json <- toJSON(unname(split(occurrence_dataframe, 1:nrow(occurrence_dataframe))))
+  #obs_json <- toJSON(unname(split(occurrence_dataframe, 1:nrow(occurrence_dataframe))))#old RCurl code
+  obs_json <- toJSON(unname(occurrence_dataframe))
+  
   
   # Construct the request
-  headers <- list('Accept' = 'application/json', 'Content-Type' = 'application/json', 'charset' = 'UTF-8')
+  #headers <- list('Accept' = 'application/json', 'Content-Type' = 'application/json', 'charset' = 'UTF-8')#old RCurl code
   
-  results_json <- postForm(url, .opts=list(postfields=obs_json, httpheader=headers))
+  # Convert the options to data frame and then JSON
+  opts <- data.frame( c(mode) )
+  names(opts) <- c("mode")
+  opts_json <-  jsonlite::toJSON(opts)
+  opts_json <- gsub('\\[','',opts_json)
+  opts_json <- gsub('\\]','',opts_json)
+  
+  # Combine the options and data into single JSON body
+  input_json <- paste0('{"opts":', opts_json, ',"data":', obs_json, '}' )
+  
+  # Send the API request
+  results_json <- POST(url = url,
+                       add_headers('Content-Type' = 'application/json'),
+                       add_headers('Accept' = 'application/json'),
+                       add_headers('charset' = 'UTF-8'),
+                       body = input_json,
+                       encode = "json")
+  
+  
+  
+  #results_json <- postForm(url, .opts=list(postfields=obs_json, httpheader=headers))#old RCurl code
   
   # Give the input file name to the function.
-  results <- fromJSON(results_json)
+  #results <- fromJSON(results_json)#old RCurl
+  
+  # Extract the response and convert to data frame
+  results_raw <- fromJSON(rawToChar(results_json$content)) 
+  results <- as.data.frame(results_raw)
+  
   
   # Convert JSON file to a data frame
   # This takes a bit of work
-  results <- as.data.frame(results)	# Convert to dataframe
+  #results <- as.data.frame(results)	# Convert to dataframe
   rownames(results)<-results[,1]# Get header names from first row
   results<-t(results)# Transpose
   results <- as.data.frame(results)	# Convert to dataframe (again)
