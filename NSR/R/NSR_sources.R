@@ -2,8 +2,8 @@
 #'
 #'Return metadata about the current NSR sources
 #' @return Dataframe containing information about the sources used in the current NSR version.
-#' @import httr
-#' @importFrom jsonlite toJSON fromJSON 
+#' @importFrom jsonlite fromJSON toJSON
+#' @importFrom httr POST add_headers
 #' @export
 #' @examples {
 #' sources <- NSR_sources()
@@ -22,7 +22,7 @@ NSR_sources <- function(){
   # Reform the options json again
   opts <- data.frame(c(mode))
   names(opts) <- c("mode")
-  opts_json <- jsonlite::toJSON(opts)
+  opts_json <- toJSON(opts)
   opts_json <- gsub('\\[','',opts_json)
   opts_json <- gsub('\\]','',opts_json)
   

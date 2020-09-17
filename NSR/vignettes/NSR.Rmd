@@ -1,5 +1,5 @@
 ---
-title: "NSR"
+title: "NSR R package"
 author: "Brian Maitner"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette

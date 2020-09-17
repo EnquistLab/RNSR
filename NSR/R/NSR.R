@@ -4,9 +4,8 @@
 #' @param occurrence_dataframe A properly formatted dataframe, see http://bien.nceas.ucsb.edu/bien/tools/nsr/batch-mode/
 #' @param mode Character. "resolve" returns information on native status.
 #' @return Dataframe containing NSR results.
-#' @import httr
-#' @importFrom jsonlite fromJSON
-#' @importFrom jsonlite toJSON
+#' @importFrom jsonlite fromJSON toJSON
+#' @importFrom httr POST add_headers
 #' @export
 #' @examples \dontrun{
 #' nsr_testfile <- 
@@ -51,7 +50,7 @@ NSR <- function(occurrence_dataframe,mode="resolve"){
   # Convert the options to data frame and then JSON
   opts <- data.frame( c(mode) )
   names(opts) <- c("mode")
-  opts_json <-  jsonlite::toJSON(opts)
+  opts_json <-  toJSON(opts)
   opts_json <- gsub('\\[','',opts_json)
   opts_json <- gsub('\\]','',opts_json)
   

@@ -2,8 +2,8 @@
 #'
 #'Return metadata about the current NSR version
 #' @return Dataframe containing current NSR version number, build date, and code version.
-#' @import httr
-#' @importFrom jsonlite toJSON fromJSON
+#' @importFrom jsonlite fromJSON toJSON
+#' @importFrom httr POST
 #' @export
 #' @examples{
 #' NSR_version_metadata <- NSR_version()
@@ -22,7 +22,7 @@ NSR_version <- function(){
   # Reform the options json again
   opts <- data.frame(c(mode))
   names(opts) <- c("mode")
-  opts_json <- jsonlite::toJSON(opts)
+  opts_json <- toJSON(opts)
   opts_json <- gsub('\\[','',opts_json)
   opts_json <- gsub('\\]','',opts_json)
   
