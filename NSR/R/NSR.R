@@ -4,7 +4,9 @@
 #' @param occurrence_dataframe A properly formatted dataframe, see http://bien.nceas.ucsb.edu/bien/tools/nsr/batch-mode/
 #' @param mode Character. "resolve" returns information on native status.
 #' @return Dataframe containing NSR results.
-#' @import RCurl rjson
+#' @import httr
+#' @importFrom jsonlite fromJSON
+#' @importFrom jsonlite toJSON
 #' @export
 #' @examples \dontrun{
 #' nsr_testfile <- 

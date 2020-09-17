@@ -6,6 +6,8 @@
 #' @param ... Additional parameters passed to internal functions.
 #' @return data.frame containing information on political divisions within the NSR database.
 #' @note Setting checklist to FALSE returns a list of political divisions that can be used to standardize spellings.
+#' @import httr
+#' @importFrom jsonlite toJSON fromJSON 
 #' @export
 #' @examples \dontrun{
 #' 

@@ -27,7 +27,7 @@ NSR_version <- function(){
   opts_json <- gsub('\\]','',opts_json)
   
   # Make the options + data JSON
-  input_json <- paste0('{"opts":', opts_json, ',"data":', data_json, '}' )
+  input_json <- paste0('{"opts":', opts_json,'}' )
   
   # Send the request
   results_json <- POST(url = url,
@@ -39,7 +39,7 @@ NSR_version <- function(){
   
   # Process the response
   results_raw <- fromJSON(rawToChar(results_json$content)) 
-  results <- as.data.frame(results_raw)
+  results <- as.data.frame(results_raw$meta)
   
   #Return the metadata, now properly formatted
   return(results)

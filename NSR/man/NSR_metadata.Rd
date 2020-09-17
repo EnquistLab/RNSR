@@ -2,23 +2,27 @@
 % Please edit documentation in R/NSR_metadata.R
 \name{NSR_metadata}
 \alias{NSR_metadata}
-\title{Get metadata on NSR sources}
+\title{Get NSR metadata}
 \usage{
-NSR_metadata(...)
+NSR_metadata(bibtex_file = NULL)
 }
 \arguments{
-\item{...}{Additional parameters passed to internal functions.}
+\item{bibtex_file}{Optional output file for writing bibtex citations.}
 }
 \value{
-data.frame containing NSR source metadata
+List containing: (1) bibtex-formatted citation information, (2) information about NSR data sources, and (3) NSR version information.
 }
 \description{
-NSR_metadata returns metadata on the sources used by the NSR.
+Returns metadata on NSR including version and citation information
+}
+\note{
+This function provides citation information in bibtex format that can be used with reference manager software (e.g. Paperpile, Zotero). Please remember to cite both the sources and the NSR, as the NSR couldn't exist without these sources!
+
+This function is a wrapper that returns the output of the functions NSR_citations, NSR_sources, and NSR_version.
 }
 \examples{
-\dontrun{
-
-nsr_sources <- NSR_metadata()
- 
+{
+metadata <- NSR_metadata()
 }
+
 }

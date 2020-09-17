@@ -6,7 +6,8 @@
 #' @param state_province A single state/province or a vector of states.  If a vector, length must equal length of species vector.
 #' @param county_parish A single county/parish or a vector of counties.  If a vector, length must equal length of species vector.
 #' @return Dataframe containing NSR results.
-#' @import RCurl  rjson
+#' @import httr
+#' @importFrom jsonlite toJSON fromJSON 
 #' @export
 #' @examples \dontrun{
 #' 

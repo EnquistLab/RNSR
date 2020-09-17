@@ -5,6 +5,8 @@
 #' @return List containing: (1) bibtex-formatted citation information, (2) information about NSR data sources, and (3) NSR version information.
 #' @note This function provides citation information in bibtex format that can be used with reference manager software (e.g. Paperpile, Zotero). Please remember to cite both the sources and the NSR, as the NSR couldn't exist without these sources!
 #' @note This function is a wrapper that returns the output of the functions NSR_citations, NSR_sources, and NSR_version.
+#' @import httr
+#' @importFrom jsonlite toJSON fromJSON 
 #' @export
 #' @examples {
 #' metadata <- NSR_metadata()
