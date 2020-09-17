@@ -54,7 +54,6 @@ pima <- BIEN_occurrence_county(country = "United States",state = "Arizona",count
 
 pima_query<-NSR_template(nrow = nrow(pima))
 
-pima_query$family <- pima$scrubbed_family
 pima_query$species <- pima$scrubbed_species_binomial
 pima_query$country <- pima$country
 pima_query$state_province <- pima$state_province
