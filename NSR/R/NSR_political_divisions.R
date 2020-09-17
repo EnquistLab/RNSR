@@ -1,11 +1,11 @@
-#'Get information on checklists within the NSR
+#'Get information on political divisions with checklists within the NSR
 #'
-#'NSR_political_divisions returns metadata on the sources used by the NSR.
-#' @param country (optional) Character. Limits results to sources for a single country
+#'NSR_political_divisions returns information on political divisions with checklist information present in the NSR.
+#' @param country (optional) Character. Limits results to political divisions containing checklist information for a single country.
 #' @param checklist If TRUE (the default) limits the result to political divisions represented by one or more comprehensive checklists.
 #' @param ... Additional parameters passed to internal functions.
 #' @return data.frame containing information on political divisions within the NSR database.
-#' @note Setting checklist to FALSE returns a list of political divisions that can be to standardize spellings.
+#' @note Setting checklist to FALSE returns a list of political divisions that can be used to standardize spellings.
 #' @export
 #' @examples \dontrun{
 #' 
@@ -22,7 +22,8 @@
 #' }
 NSR_political_divisions <- function(country = NULL, checklist = T, ...){
 
-  url <- "http://bien.nceas.ucsb.edu/bien/apps/nsr/nsr_ws.php?do=poldivs"
+  #url <- "http://bien.nceas.ucsb.edu/bien/apps/nsr/nsr_ws.php?do=poldivs"
+  url <-  "https://bien.nceas.ucsb.edu/nsrdev/nsr_ws.php?do=poldivs"
   
   #add country (optionally)
   
@@ -38,28 +39,17 @@ NSR_political_divisions <- function(country = NULL, checklist = T, ...){
   #specify json
   url<-paste(url, "&format=json",sep = "")
   
-  #Get metadata in json format
-  results_json <- .handle_url(url = url,...)
-  if(grepl(pattern = "http://bien.nceas.ucsb.edu",x = results_json)){return(results_json)}
+
+  results_json <- GET(url = url)
+  results_raw <- fromJSON(rawToChar(results_json$content)) 
+  results_raw<-results_raw$nsr_results$nsr_result
   
-  #Convert NULLs to NAs
-  results_json<-gsub(pattern = "null",replacement = '\"\"',x = results_json)
-  
-  #Convert metadata from json format into a list of lists
-  
-  results <- fromJSON(results_json,simplify = T)
   
   #If there were no results returned, print a message.  Otherwise, format the results and return them
-  if(length(results$nsr_results)==0){message("Country not found")}else{
+  if(nrow(results_raw)==0){message("Country not found")}else{
   
-  
-  #Convert lists into a dataframe
-  output<-data.frame(matrix(unlist(results), nrow=length(results[[1]]), byrow=T),stringsAsFactors=FALSE)
-  
-  #Rename dataframe columns
-  colnames(output)<-names(results[[1]][[1]][[1]])
   
   #Return the metadata, now properly formatted
-  return(output)
+  return(results_raw)
   }
 }
