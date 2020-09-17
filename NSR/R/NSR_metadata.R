@@ -1,36 +1,28 @@
-#'Get metadata on NSR sources
+#'Get NSR metadata
 #'
-#'NSR_metadata returns metadata on the sources used by the NSR.
-#' @param ... Additional parameters passed to internal functions.
-#' @return data.frame containing NSR source metadata
+#'Returns metadata on NSR including version and citation information
+#' @param bibtex_file Optional output file for writing bibtex citations.
+#' @return List containing: (1) bibtex-formatted citation information, (2) information about NSR data sources, and (3) NSR version information.
+#' @note This function provides citation information in bibtex format that can be used with reference manager software (e.g. Paperpile, Zotero). Please remember to cite both the sources and the NSR, as the NSR couldn't exist without these sources!
+#' @note This function is a wrapper that returns the output of the functions NSR_citations, NSR_sources, and NSR_version.
 #' @export
-#' @examples \dontrun{
-#' 
-#' nsr_sources <- NSR_metadata()
-#'  
+#' @examples {
+#' metadata <- NSR_metadata()
 #' }
-NSR_metadata <- function(...){
+#' 
+NSR_metadata <- function(bibtex_file=NULL){
   
-  #Get metadata in json format
-  #results_json <- getURL(url = url)
+  output <- list()
   
-  results_json <- .handle_url(url = "http://bien.nceas.ucsb.edu/bien/apps/nsr/nsr_ws.php?do=meta&format=json",...)
+  output[[1]] <- NSR_citations()
+  output[[2]] <-NSR_sources()
+  output[[3]] <-NSR_version()
   
-  if(grepl(pattern = "http://bien.nceas.ucsb.edu",x = results_json)){return(results_json)}
+  names(output)<-c("citations","version","sources")
   
-  #Convert NULLs to NAs
-  results_json<-gsub(pattern = "null",replacement = '\"\"',x = results_json)
+  #Write the bibtex information if a file is specified
+  if(!is.null(bibtex_file)){writeLines(text = output$citations$citation, con = bibtex_file)}
   
-  #Convert metadata from json format into a list of lists
-  results <- fromJSON(results_json)
-  
-  #Convert lists into a dataframe
-  output<-data.frame(matrix(unlist(results), nrow=length(results[[1]]), byrow=T),stringsAsFactors=FALSE)
-  
-  #Rename dataframe columns
-  colnames(output)<-names(results[[1]][[1]][[1]])
-  
-  #Return the metadata, now properly formatted
   return(output)
   
 }
