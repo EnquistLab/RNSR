@@ -4,12 +4,10 @@
 \alias{NSR}
 \title{Check the native status for plant species in a political region}
 \usage{
-NSR(occurrence_dataframe, mode = "resolve")
+NSR(occurrence_dataframe)
 }
 \arguments{
 \item{occurrence_dataframe}{A properly formatted dataframe, see http://bien.nceas.ucsb.edu/bien/tools/nsr/batch-mode/}
-
-\item{mode}{Character. "resolve" returns information on native status.}
 }
 \value{
 Dataframe containing NSR results.

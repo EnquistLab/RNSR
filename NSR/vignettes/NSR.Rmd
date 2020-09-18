@@ -41,27 +41,24 @@ NSR_super_simple(species = "Acer rubrum",
 ```
 
 #Multiple species
+When submitting data into the NSR, the function expects a data.frame containing 5 columns as input, however only the columns "species" and "country" (the first two) need to be populated. If you ever forget the input format, you can use the function NSR_template as a quick look-up, or to populate.
 
 ```{r}
 
-#First, we'll grab some occurrence records from BIEN
-library(BIEN)
+head(NSR_template())
 
-pima <- BIEN_occurrence_county(country = "United States",state = "Arizona",county = "Pima", all.taxonomy = T,natives.only = F,native.status = T,cultivated = T,political.boundaries = T, limit = 100)
+```
 
-#The NSR function expects 6 columns as input, however only the fields "species" and "country" need to be populated.
-#If you ever forget, you can use the function NSR_template as a quick lookup, or to populate.
+#Example data
+```{r}
 
-pima_query<-NSR_template(nrow = nrow(pima))
+#First, pull the example data that are included with the package
+data("nsr_testfile")
+head(nsr_testfile)
 
-pima_query$species <- pima$scrubbed_species_binomial
-pima_query$country <- pima$country
-pima_query$state_province <- pima$state_province
-pima_query$county_parish <- pima$county
+example_results <- NSR(nsr_testfile)
 
-pima_nsr_results <- NSR(pima_query)
-
-head(pima_nsr_results)
+head(example_results)
 
 ```
 
