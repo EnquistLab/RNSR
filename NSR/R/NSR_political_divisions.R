@@ -25,7 +25,12 @@
 NSR_political_divisions <- function(country = NULL, checklist = T, ...){
 
   #url <- "http://bien.nceas.ucsb.edu/bien/apps/nsr/nsr_ws.php?do=poldivs"
-  url <-  "https://bien.nceas.ucsb.edu/nsrdev/nsr_ws.php?do=poldivs"
+  #url <-  "https://bien.nceas.ucsb.edu/nsrdev/nsr_ws.php?do=poldivs"
+  url <-  "https://bien.nceas.ucsb.edu/nsrdev/nsr_ws.php"
+  
+  
+  #url <- "https://nsrapi.xyz/nsr_wsb.php"
+  url<- paste(url,"?do=poldivs",sep = "")
   
   #add country (optionally)
   
