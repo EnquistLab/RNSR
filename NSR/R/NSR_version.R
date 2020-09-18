@@ -12,10 +12,7 @@
 NSR_version <- function(){
   
   # Base url for NSR Batch API
-  #url = "https://bien.nceas.ucsb.edu/nsr/nsr_wsb.php"		# Production (nimoy)
-  #url = "https://nsrapi.xyz/nsr_wsb.php"		# Production (nimoy) - using domain name)
-  url = "https://bien.nceas.ucsb.edu/nsrdev/nsr_wsb.php"		# Development (nimoy)
-  
+  url <- "https://nsrapi.xyz/nsr_wsb.php"  
   
   mode <- "meta"		
   

@@ -2,7 +2,6 @@
 #'
 #'NSR returns information on native status for species within a political region.
 #' @param occurrence_dataframe A properly formatted dataframe, see http://bien.nceas.ucsb.edu/bien/tools/nsr/batch-mode/
-#' @param mode Character. "resolve" returns information on native status.
 #' @return Dataframe containing NSR results.
 #' @importFrom jsonlite fromJSON toJSON
 #' @importFrom httr POST add_headers
@@ -32,12 +31,14 @@
 #' 
 #' 
 #' }
-NSR <- function(occurrence_dataframe,mode="resolve"){
+NSR <- function(occurrence_dataframe){
+  
+  #Set this internally rather than as an argument, since this is the only one that makes sense here (for now)
+  mode="resolve"
   
   # Base url for NSR Batch API
-  #url <- "http://bien.nceas.ucsb.edu/bien/apps/nsr/nsr_wsb.php"
-  #url <- "https://nsrapi.xyz/nsr_wsb.php"
-  url = "https://bien.nceas.ucsb.edu/nsrdev/nsr_wsb.php"		# Development (nimoy)
+  url <- "https://nsrapi.xyz/nsr_wsb.php"
+  
   
   # Convert to JSON
   #obs_json <- toJSON(unname(split(occurrence_dataframe, 1:nrow(occurrence_dataframe))))#old RCurl code

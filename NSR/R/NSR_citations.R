@@ -14,11 +14,7 @@ NSR_citations <- function(){
   mode = "citations"
   
   # URL for TNRS API
-  #url = "https://tnrsapidev.xyz/tnrs_api.php"
-  #url = "http://vegbiendev.nceas.ucsb.edu:8975/tnrs_api.php"
-  #url = "https://tnrsapi.xyz/tnrs_api.php"
-  url = "https://bien.nceas.ucsb.edu/nsrdev/nsr_wsb.php"		# Development (nimoy)
-  
+  url <- "https://nsrapi.xyz/nsr_wsb.php"  
 
   # Reform the options json again
   opts <- data.frame(c(mode))

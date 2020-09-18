@@ -13,10 +13,7 @@ NSR_sources <- function(){
   mode = "sources"
   
   # URL for NSR API
-  #url = "https://bien.nceas.ucsb.edu/nsr/nsr_wsb.php"		# Production (nimoy)
-  #url = "https://nsrapi.xyz/nsr_wsb.php"		# Production (nimoy) - using domain name)
-  url = "https://bien.nceas.ucsb.edu/nsrdev/nsr_wsb.php"		# Development (nimoy)
-  
+  url <- "https://nsrapi.xyz/nsr_wsb.php"
   
   
   # Reform the options json again
