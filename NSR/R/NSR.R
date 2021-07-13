@@ -33,6 +33,12 @@
 #' }
 NSR <- function(occurrence_dataframe){
   
+  # Check for internet access
+  if (!check_internet()) {
+    message("This function requires internet access, please check your connection.")
+    return(invisible(NULL))
+  }
+  
   #Set this internally rather than as an argument, since this is the only one that makes sense here (for now)
   mode="resolve"
   
@@ -59,14 +65,19 @@ NSR <- function(occurrence_dataframe){
   input_json <- paste0('{"opts":', opts_json, ',"data":', obs_json, '}' )
   
   # Send the API request
-  results_json <- POST(url = url,
-                       add_headers('Content-Type' = 'application/json'),
-                       add_headers('Accept' = 'application/json'),
-                       add_headers('charset' = 'UTF-8'),
-                       body = input_json,
-                       encode = "json")
+  # Send the request in a "graceful failure" wrapper for CRAN compliance
+  tryCatch(expr = results_json <- POST(url = url,
+                                       add_headers('Content-Type' = 'application/json'),
+                                       add_headers('Accept' = 'application/json'),
+                                       add_headers('charset' = 'UTF-8'),
+                                       body = input_json,
+                                       encode = "json"),
+           error = function(e) {
+             message("There appears to be a problem reaching the API.") 
+           })
   
-  
+  #Return NULL if API isn't working
+  if(!exists("results_json")){return(invisible(NULL))}
   
   #results_json <- postForm(url, .opts=list(postfields=obs_json, httpheader=headers))#old RCurl code
   
@@ -81,10 +92,10 @@ NSR <- function(occurrence_dataframe){
   # Convert JSON file to a data frame
   # This takes a bit of work
   #results <- as.data.frame(results)	# Convert to dataframe
-  rownames(results)<-results[,1]# Get header names from first row
-  results<-t(results)# Transpose
+  rownames(results) <- results[,1]# Get header names from first row
+  results <- t(results)# Transpose
   results <- as.data.frame(results)	# Convert to dataframe (again)
-  results = results[-1, ] # Remove the first row.
+  results <- results[-1, ] # Remove the first row.
   rownames(results) <- NULL	# Reset row numbers
   
   return(results)

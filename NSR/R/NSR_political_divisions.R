@@ -24,6 +24,12 @@
 #' }
 NSR_political_divisions <- function(country = NULL, checklist = T, ...){
 
+  # Check for internet access
+  if (!check_internet()) {
+    message("This function requires internet access, please check your connection.")
+    return(invisible(NULL))
+  }
+
   #url <- "http://bien.nceas.ucsb.edu/bien/apps/nsr/nsr_ws.php?do=poldivs"
   #url <-  "https://bien.nceas.ucsb.edu/nsrdev/nsr_ws.php?do=poldivs"
   url <-  "https://bien.nceas.ucsb.edu/nsrdev/nsr_ws.php"
@@ -34,28 +40,38 @@ NSR_political_divisions <- function(country = NULL, checklist = T, ...){
   
   #add country (optionally)
   
-  if(!is.null(country)){url<-paste(url,"&country=",country,sep = "") }
-  url<-gsub(pattern = " ",replacement = "%20",x = url)
-  
-  
+  if(!is.null(country)){
+    url <- paste(url, "&country=", country, sep = "")
+    }
+  url <- gsub(pattern = " ", replacement = "%20",x = url)
+
   #add checklist
   
-  if(checklist){url<-paste(url,"&checklist=true",sep = "")}
-  if(!checklist){url<-paste(url,"&checklist=false",sep = "")}
+  if(checklist){
+    url <- paste(url, "&checklist=true", sep = "")
+    }
+  if(!checklist)
+  {url <- paste(url, "&checklist=false", sep = "")
+    }
 
   #specify json
-  url<-paste(url, "&format=json",sep = "")
+  url <- paste(url, "&format=json", sep = "")
   
+  #Get results from the API, but in a wrapper to "fail gracefully"
+  tryCatch(expr = results_json <- GET(url = url),
+           error = function(e) {
+             message("There appears to be a problem reaching the API.")
+           })
+  
+  #Return NULL if API isn't working
+  if(!exists("results_json")){return(invisible(NULL))}
 
-  results_json <- GET(url = url)
   results_raw <- fromJSON(rawToChar(results_json$content)) 
   results_raw<-results_raw$nsr_results$nsr_result
-  
-  
+
   #If there were no results returned, print a message.  Otherwise, format the results and return them
   if(nrow(results_raw)==0){message("Country not found")}else{
-  
-  
+
   #Return the metadata, now properly formatted
   return(results_raw)
   }
