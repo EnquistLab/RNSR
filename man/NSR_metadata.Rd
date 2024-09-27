@@ -8,6 +8,8 @@ NSR_metadata(bibtex_file = NULL, ...)
 }
 \arguments{
 \item{bibtex_file}{Optional output file for writing bibtex citations.}
+
+\item{...}{Additional arguments passed to internal functions.}
 }
 \value{
 List containing: (1) bibtex-formatted citation information, (2) information about NSR data sources, and (3) NSR version information.

@@ -1,0 +1,35 @@
+http_interactions:
+- request:
+    method: get
+    uri: https://bien.nceas.ucsb.edu/nsrdev/nsr_ws.php?do=poldivs&country=Canada&checklist=true&format=json
+    body:
+      encoding: ''
+      string: ''
+    headers:
+      Accept: application/json, text/xml, application/xml, */*
+  response:
+    status:
+      status_code: 404
+      category: Client error
+      reason: Not Found
+      message: 'Client error: (404) Not Found'
+    headers:
+      date: Fri, 27 Sep 2024 15:37:11 GMT
+      server: Apache
+      content-length: '266'
+      content-type: text/html; charset=iso-8859-1
+    body:
+      encoding: ''
+      file: no
+      string: |
+        <!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
+        <html><head>
+        <title>404 Not Found</title>
+        </head><body>
+        <h1>Not Found</h1>
+        <p>The requested URL was not found on this server.</p>
+        <hr>
+        <address>Apache Server at bien.nceas.ucsb.edu Port 443</address>
+        </body></html>
+  recorded_at: 2024-09-27 15:37:08 GMT
+  recorded_with: vcr/1.6.0, webmockr/1.0.0

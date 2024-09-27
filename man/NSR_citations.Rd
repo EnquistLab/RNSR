@@ -6,6 +6,9 @@
 \usage{
 NSR_citations(...)
 }
+\arguments{
+\item{...}{Additional arguments passed to internal functions.}
+}
 \value{
 Dataframe containing bibtex-formatted citation information
 }

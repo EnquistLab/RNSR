@@ -6,6 +6,9 @@
 \usage{
 NSR_version(...)
 }
+\arguments{
+\item{...}{Additional arguments passed to internal functions.}
+}
 \value{
 Dataframe containing current NSR version number, build date, and code version.
 }

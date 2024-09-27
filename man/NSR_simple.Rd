@@ -20,6 +20,8 @@ NSR_simple(
 \item{state_province}{A single state/province or a vector of states.  If a vector, length must equal length of species vector.}
 
 \item{county_parish}{A single county/parish or a vector of counties.  If a vector, length must equal length of species vector.}
+
+\item{...}{Additional arguments passed to internal functions.}
 }
 \value{
 Dataframe containing NSR results.

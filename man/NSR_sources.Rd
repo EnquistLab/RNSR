@@ -6,6 +6,9 @@
 \usage{
 NSR_sources(...)
 }
+\arguments{
+\item{...}{Additional arguments passed to internal functions.}
+}
 \value{
 Dataframe containing information about the sources used in the current NSR version.
 }

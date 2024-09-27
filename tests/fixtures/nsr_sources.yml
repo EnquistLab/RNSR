@@ -1,0 +1,42 @@
+http_interactions:
+- request:
+    method: post
+    uri: http://vegbiendev.nceas.ucsb.edu:9865/nsr_wsb.php
+    body:
+      encoding: ''
+      string: '{"opts":{"mode":"sources"}}'
+    headers:
+      Content-Type: application/json
+      Accept: application/json
+      charset: UTF-8
+  response:
+    status:
+      status_code: 200
+      category: Success
+      reason: OK
+      message: 'Success: (200) OK'
+    headers:
+      date: Fri, 27 Sep 2024 15:05:53 GMT
+      server: Apache/2.4.41 (Ubuntu)
+      access-control-allow-origin: '*'
+      content-length: '2770'
+      content-type: application/json
+    body:
+      encoding: ''
+      file: no
+      string: '[{"sources":{"source_id":"1","source_name":"conosur","source_name_full":"Cat\u00e1logo
+        de las plantas vasculares del Cono Sur (Argentina, Sur de Brasil, Chile, Paraguay
+        y Uruguay)","source_url":"http:\/\/www.darwin.edu.ar\/Proyectos\/FloraArgentina\/fa.htm","date_accessed":"2024-09-01","is_comprehensive":"1"}},{"sources":{"source_id":"2","source_name":"flbr","source_name_full":"Brazilian
+        Flora 2020 project","source_url":"http:\/\/ipt.jbrj.gov.br\/jbrj\/resource?r=lista_especies_flora_brasil#downloads","date_accessed":"2024-08-01","is_comprehensive":"1"}},{"sources":{"source_id":"3","source_name":"fwi","source_name_full":"Flora
+        of the West Indies","source_url":"http:\/\/botany.si.edu\/antilles\/westindies\/","date_accessed":"2015-09-16","is_comprehensive":"1"}},{"sources":{"source_id":"4","source_name":"ipane","source_name_full":"Invasive
+        Plant Atlas of New England","source_url":"http:\/\/www.eddmaps.org\/ipane\/index.html","date_accessed":"2014-03-10","is_comprehensive":"0"}},{"sources":{"source_id":"5","source_name":"mab","source_name_full":"Endemic
+        genera and families from Mabberley","source_url":"","date_accessed":"2017-09-05","is_comprehensive":"0"}},{"sources":{"source_id":"6","source_name":"mexico","source_name_full":"Checklist
+        of the native vascular plants of Mexico","source_url":"http:\/\/www.sciencedirect.com\/science\/article\/pii\/S1870345316300707","date_accessed":"2017-08-28","is_comprehensive":"1"}},{"sources":{"source_id":"7","source_name":"newguinea","source_name_full":"Flora
+        of New Guinea","source_url":"https:\/\/www.nature.com\/articles\/s41586-020-2549-5","date_accessed":"2020-08-18","is_comprehensive":"0"}},{"sources":{"source_id":"8","source_name":"powo","source_name_full":"Plants
+        of the World Online","source_url":"http:\/\/www.plantsoftheworldonline.org\/","date_accessed":"2024-05-21","is_comprehensive":"1"}},{"sources":{"source_id":"9","source_name":"tropicos","source_name_full":"Missouri
+        Botanical Gardens country checklists","source_url":"www.http:\/\/services.tropicos.org\/","date_accessed":"2014-03-10","is_comprehensive":"1"}},{"sources":{"source_id":"10","source_name":"usda","source_name_full":"USDA
+        Plants Database","source_url":"http:\/\/plants.usda.gov\/adv_search.html","date_accessed":"2014-03-10","is_comprehensive":"1"}},{"sources":{"source_id":"11","source_name":"vascan","source_name_full":"Database
+        of Vascular Plants of Canada","source_url":"http:\/\/www.canadensys.net\/activities\/development\/vascan","date_accessed":"2024-09-16","is_comprehensive":"1"}},{"sources":{"source_id":"12","source_name":"weakley","source_name_full":"Exotics
+        from Alan Weakley Flora of E. North America","source_url":"http:\/\/www.herbarium.unc.edu\/flora.htm","date_accessed":"2014-07-30","is_comprehensive":"0"}}]'
+  recorded_at: 2024-09-27 15:05:49 GMT
+  recorded_with: vcr/1.6.0, webmockr/1.0.0
