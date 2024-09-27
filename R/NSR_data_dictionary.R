@@ -3,10 +3,12 @@
 #'Returns information from the NSR data dictionary
 #' @param native_status Logical. If FALSE(Default) returns information on fields. If TRUE, returns information on Native Status categories. 
 #' @param ... Additional arguments passed to internal functions.
-#' @return List containing: (1) bibtex-formatted citation information, (2) information about NSR data sources, and (3) NSR version information.
+#' @return Data.frame containing requested data dictionary contents.
 #' @export
 #' @examples {
-#' metadata <- NSR_metadata()
+#' NSR_fields <- NSR_data_dictionary()
+#' 
+#' status_codes <- NSR_data_dictionary(native_status = TRUE)
 #' }
 #' 
 NSR_data_dictionary <- function(native_status=FALSE, ...){

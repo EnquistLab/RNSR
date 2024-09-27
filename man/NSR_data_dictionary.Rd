@@ -12,14 +12,16 @@ NSR_data_dictionary(native_status = FALSE, ...)
 \item{...}{Additional arguments passed to internal functions.}
 }
 \value{
-List containing: (1) bibtex-formatted citation information, (2) information about NSR data sources, and (3) NSR version information.
+Data.frame containing requested data dictionary contents.
 }
 \description{
 Returns information from the NSR data dictionary
 }
 \examples{
 {
-metadata <- NSR_metadata()
+NSR_fields <- NSR_data_dictionary()
+
+status_codes <- NSR_data_dictionary(native_status = TRUE)
 }
 
 }

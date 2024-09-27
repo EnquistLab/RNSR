@@ -5,7 +5,7 @@
 #' @param mode API mode to use.  One of "collaborators",
 #' @param data_json Either NULL (the default) or properly formatted json
 #' @param batches NULL or Numeric.  Optional number of batches to divide the request into for parallel processing.
-#' @importFrom jsonlite toJSON
+#' @importFrom jsonlite toJSON fromJSON
 #' @import httr
 #' @keywords internal
 nsr_core <- function(url = "https://nsrapi.xyz/nsr_wsb.php",
