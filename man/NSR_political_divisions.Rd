@@ -7,11 +7,9 @@
 NSR_political_divisions(by_country = TRUE, ...)
 }
 \arguments{
+\item{by_country}{Logical. If TRUE (the default), will return a data.frame of checklists for each country. If FALSE, will return a data.frame of countries for each checklist.}
+
 \item{...}{Additional parameters passed to internal functions.}
-
-\item{country}{(optional) Character. Limits results to political divisions containing checklist information for a single country.}
-
-\item{checklist}{If TRUE (the default) limits the result to political divisions represented by one or more comprehensive checklists.}
 }
 \value{
 data.frame containing information on political divisions within the NSR database.
