@@ -3,8 +3,6 @@
 #'Return metadata about the current NSR sources
 #' @param ... Additional arguments passed to internal functions.
 #' @return Dataframe containing information about the sources used in the current NSR version.
-#' @importFrom jsonlite fromJSON toJSON
-#' @importFrom httr POST add_headers
 #' @export
 #' @examples {
 #' sources <- NSR_sources()
@@ -18,6 +16,6 @@ NSR_sources <- function(...){
     return(invisible(NULL))
   }
   
-  return(nsr_core(mode = "sources",...))
+  return(nsr_core(mode = "sources",...)$sources)
 
 }#NSR sources

@@ -4,14 +4,14 @@
 \alias{NSR_political_divisions}
 \title{Get information on political divisions with checklists within the NSR}
 \usage{
-NSR_political_divisions(country = NULL, checklist = T, ...)
+NSR_political_divisions(by_country = TRUE, ...)
 }
 \arguments{
+\item{...}{Additional parameters passed to internal functions.}
+
 \item{country}{(optional) Character. Limits results to political divisions containing checklist information for a single country.}
 
 \item{checklist}{If TRUE (the default) limits the result to political divisions represented by one or more comprehensive checklists.}
-
-\item{...}{Additional parameters passed to internal functions.}
 }
 \value{
 data.frame containing information on political divisions within the NSR database.
@@ -26,14 +26,10 @@ Setting checklist to FALSE returns a list of political divisions that can be use
 \dontrun{
 
 #To get a list of all political divisions with comprehensive checklists:
-nsr_checklists <- NSR_political_divisions()
+checklists_per_country <- NSR_political_divisions()
 
-#To get a list of political divisions to standardize spelling against:
-nsr_poldivs <- NSR_political_divisions(checklist = F)
+#To get a list of all checklists the associated countries, set "by_country" to FALSE
+countries_per_checklist <- NSR_political_divisions(by_country=FALSE)
 
-#To get checklist information for a single country:
-
-nsr_checklists_canada <- NSR_political_divisions(country = "Canada")
- 
 }
 }

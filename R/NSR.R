@@ -4,8 +4,6 @@
 #' @param occurrence_dataframe A properly formatted dataframe, see http://bien.nceas.ucsb.edu/bien/tools/nsr/batch-mode/
 #' @param ... Additional arguments passed to internal functions.
 #' @return Dataframe containing NSR results.
-#' @importFrom jsonlite fromJSON toJSON
-#' @importFrom httr POST add_headers
 #' @export
 #' @examples \dontrun{
 #'
