@@ -5,6 +5,7 @@
 #' @param country A single country or a vector of countries.  If a vector, length must equal length of species vector.
 #' @param state_province A single state/province or a vector of states.  If a vector, length must equal length of species vector.
 #' @param county_parish A single county/parish or a vector of counties.  If a vector, length must equal length of species vector.
+#' @param ... Additional arguments passed to internal functions.
 #' @return Dataframe containing NSR results.
 #' @export
 #' @examples \dontrun{

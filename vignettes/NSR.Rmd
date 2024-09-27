@@ -33,9 +33,9 @@ install_github("EnquistLab/RNSR/NSR")
 
 ```{r}
 library(NSR)
-NSR_super_simple(species = "Acer rubrum",
-                 country =  "Canada", 
-                 state_province = "Ontario")
+NSR_simple(species = "Acer rubrum",
+           country =  "Canada",
+           state_province = "Ontario")
 
 
 ```

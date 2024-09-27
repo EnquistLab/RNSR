@@ -2,6 +2,7 @@
 #'
 #'NSR returns information on native status for species within a political region.
 #' @param occurrence_dataframe A properly formatted dataframe, see http://bien.nceas.ucsb.edu/bien/tools/nsr/batch-mode/
+#' @param ... Additional arguments passed to internal functions.
 #' @return Dataframe containing NSR results.
 #' @importFrom jsonlite fromJSON toJSON
 #' @importFrom httr POST add_headers
@@ -30,7 +31,6 @@
 #' 
 #' }
 NSR <- function(occurrence_dataframe,
-                batches = NULL,
                 ...){
   
   #check that input is a data.frame
@@ -59,23 +59,7 @@ NSR <- function(occurrence_dataframe,
     stop("user_id should be either null or populated by unique values")
   }
   
-  #check that batches makes sense
-  
-  #check that batches is either NULL or numeric
-  if(!is.null(batches) & !is.numeric(batches)) {
-    stop("Argument 'batches' must be either NULL or a positive integer. ")
-  }
-  
-  #check that it is a whole number greater than zero
-  if(is.numeric(batches)){
-    
-    
-    if(batches<=0 | batches%%1!=0) {
-      stop("Argument 'batches' must be either NULL or a positive integer.")
-    }
-    
-  }
-  
+
   # Convert the data to JSON
   data_json <- toJSON(unname(occurrence_dataframe))
   

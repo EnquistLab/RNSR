@@ -1,6 +1,7 @@
 #'Get information on sources used by the NSR
 #'
 #'Return metadata about the current NSR sources
+#' @param ... Additional arguments passed to internal functions.
 #' @return Dataframe containing information about the sources used in the current NSR version.
 #' @importFrom jsonlite fromJSON toJSON
 #' @importFrom httr POST add_headers
