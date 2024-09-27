@@ -8,7 +8,8 @@ nsr_core(
   url = "https://nsrapi.xyz/nsr_wsb.php",
   mode,
   data_json = NULL,
-  batches = NULL
+  batches = NULL,
+  skip_internet_check = FALSE
 )
 }
 \arguments{

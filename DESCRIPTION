@@ -7,7 +7,7 @@ Authors@R: c(
             )
 Description: Provides tools for interacting with the Native Species Resolver (NSR) API and associated functionality.
 Depends: 
-        R (>= 3.4.0)
+        R (>= 3.5.0)
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true

@@ -8,7 +8,8 @@ NSR_simple(
   species = NULL,
   country = NULL,
   state_province = NULL,
-  county_parish = NULL
+  county_parish = NULL,
+  ...
 )
 }
 \arguments{
