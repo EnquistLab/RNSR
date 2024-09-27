@@ -8,7 +8,7 @@
 #' @importFrom httr POST add_headers
 #' @export
 #' @examples {
-#' citation_info <- NSR_citations(...)
+#' citation_info <- NSR_citations()
 #' }
 #' 
 NSR_citations <- function(...){
