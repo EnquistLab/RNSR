@@ -10,7 +10,7 @@
 #' metadata <- NSR_metadata()
 #' }
 #' 
-NSR_metadata <- function(bibtex_file=NULL){
+NSR_metadata <- function(bibtex_file=NULL,...){
   
   # Check for internet access
   if (!check_internet()) {
@@ -20,9 +20,9 @@ NSR_metadata <- function(bibtex_file=NULL){
   
   output <- list()
   
-  output[[1]] <- NSR_citations()
-  output[[2]] <-NSR_sources()
-  output[[3]] <-NSR_version()
+  output[[1]] <- NSR_citations(...)
+  output[[2]] <- NSR_sources(...)
+  output[[3]] <- NSR_version(...)
   
   names(output)<-c("citations","version","sources")
   

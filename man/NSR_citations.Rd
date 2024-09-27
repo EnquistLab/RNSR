@@ -4,7 +4,7 @@
 \alias{NSR_citations}
 \title{Get citation information}
 \usage{
-NSR_citations()
+NSR_citations(...)
 }
 \value{
 Dataframe containing bibtex-formatted citation information

@@ -4,7 +4,7 @@
 \alias{NSR_metadata}
 \title{Get NSR metadata}
 \usage{
-NSR_metadata(bibtex_file = NULL)
+NSR_metadata(bibtex_file = NULL, ...)
 }
 \arguments{
 \item{bibtex_file}{Optional output file for writing bibtex citations.}

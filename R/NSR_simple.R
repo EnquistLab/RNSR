@@ -1,6 +1,6 @@
 #'Check the native status for plant species in a political region
 #'
-#'NSR_super_simple returns information on native status for species within a political region.
+#'NSR_simple returns information on native status for species within a political region.
 #' @param species A single species or a vector of species, with genus and specific epithet separated by a space.
 #' @param country A single country or a vector of countries.  If a vector, length must equal length of species vector.
 #' @param state_province A single state/province or a vector of states.  If a vector, length must equal length of species vector.
@@ -9,14 +9,14 @@
 #' @export
 #' @examples \dontrun{
 #' 
-#' results <- NSR_super_simple(species = "Acer rubrum",
+#' results <- NSR_simple(species = "Acer rubrum",
 #'            country = "Canada",state_province = "Ontario")
 #' 
-#' results <- NSR_super_simple(species = c("Acer rubrum", "Aspen tremuloides") , 
+#' results <- NSR_simple(species = c("Acer rubrum", "Aspen tremuloides") , 
 #'            country = c("Canada","Canada"),state_province = c("Ontario","Ontario"))
 #' 
 #' }
-NSR_super_simple <- function(species=NULL, country=NULL, state_province=NULL,county_parish=NULL){
+NSR_simple <- function(species=NULL, country=NULL, state_province=NULL,county_parish=NULL){
   
   # Check for internet access
   if (!check_internet()) {
@@ -41,7 +41,7 @@ NSR_super_simple <- function(species=NULL, country=NULL, state_province=NULL,cou
   }
 
   #Make template
-  template<-NSR_template(nrow = length(species))
+  template <- NSR_template(nrow = length(species))
   
   
   #Populate fields as needed

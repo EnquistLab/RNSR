@@ -4,7 +4,7 @@
 \alias{NSR_sources}
 \title{Get information on sources used by the NSR}
 \usage{
-NSR_sources()
+NSR_sources(...)
 }
 \value{
 Dataframe containing information about the sources used in the current NSR version.

@@ -67,7 +67,7 @@ NSR_political_divisions <- function(country = NULL, checklist = T, ...){
   if(!exists("results_json")){return(invisible(NULL))}
 
   results_raw <- fromJSON(rawToChar(results_json$content)) 
-  results_raw<-results_raw$nsr_results$nsr_result
+  results_raw <- results_raw$nsr_results$nsr_result
 
   #If there were no results returned, print a message.  Otherwise, format the results and return them
   if(nrow(results_raw)==0){message("Country not found")}else{

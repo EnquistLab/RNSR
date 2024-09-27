@@ -4,7 +4,7 @@
 \alias{NSR_version}
 \title{Get metadata on current NSR version}
 \usage{
-NSR_version()
+NSR_version(...)
 }
 \value{
 Dataframe containing current NSR version number, build date, and code version.
