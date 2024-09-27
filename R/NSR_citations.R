@@ -7,18 +7,11 @@
 #' @importFrom httr POST add_headers
 #' @export
 #' @examples {
-#' citation_info <- NSR_citations()
+#' citation_info <- NSR_citations(...)
 #' }
 #' 
 NSR_citations <- function(...){
   
-  # # Check for internet access
-  if (!check_internet()) {
-    message("This function requires internet access, please check your connection.")
-    return(invisible(NULL))
-  }
-  
   return(nsr_core(mode="citations",...))
   
-
 }#NSR citations

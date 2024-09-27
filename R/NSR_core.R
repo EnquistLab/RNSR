@@ -8,7 +8,19 @@
 #' @importFrom jsonlite toJSON
 #' @import httr
 #' @keywords internal
-nsr_core <- function(url = "https://nsrapi.xyz/nsr_wsb.php", mode, data_json = NULL, batches = NULL){
+nsr_core <- function(url = "https://nsrapi.xyz/nsr_wsb.php",
+                     mode,
+                     data_json = NULL,
+                     batches = NULL,
+                     skip_internet_check = FALSE){
+  
+  # Check for internet access
+  if (!skip_internet_check) {
+    if (!check_internet()) {
+      message("This function requires internet access, please check your connection.")
+      return(invisible(NULL))
+    }
+  }
   
   # Construct the request
   headers <- list('Accept' = 'application/json', 'Content-Type' = 'application/json', 'charset' = 'UTF-8')

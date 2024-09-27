@@ -33,13 +33,6 @@ NSR <- function(occurrence_dataframe,
                 batches = NULL,
                 ...){
   
-  # Check for internet access
-  if (!check_internet()) {
-    message("This function requires internet access, please check your connection.")
-    #return(invisible(NULL))
-  }
-  
-  
   #check that input is a data.frame
   if(!inherits(occurrence_dataframe,"data.frame")){
     stop("occurrence_dataframe should be a data.frame")

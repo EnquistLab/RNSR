@@ -16,17 +16,9 @@
 #'            country = c("Canada","Canada"),state_province = c("Ontario","Ontario"))
 #' 
 #' }
-NSR_simple <- function(species=NULL, country=NULL, state_province=NULL,county_parish=NULL){
-  
-  # Check for internet access
-  if (!check_internet()) {
-    message("This function requires internet access, please check your connection.")
-    return(invisible(NULL))
-  }
-  
+NSR_simple <- function(species=NULL, country=NULL, state_province=NULL,county_parish=NULL,...){
   
   #Check input for odd stuff
-  
   
   if(length(species) != length(country)){stop("Country and species vectors should be the same length.")}
   
@@ -65,7 +57,7 @@ NSR_simple <- function(species=NULL, country=NULL, state_province=NULL,county_pa
   }
   
   
-  return(NSR(template))
+  return(NSR(template,...))
   
   
 }
