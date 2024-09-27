@@ -1,8 +1,8 @@
 # api urls
 
 # URL for NSR API
-url <- "https://nsrapi.xyz/nsr_wsb.php" # production
-#url <- "http://vegbiendev.nceas.ucsb.edu:9865/nsr_wsb.php" #testing
+#url <- "https://nsrapi.xyz/nsr_wsb.php" # production
+url <- "http://vegbiendev.nceas.ucsb.edu:9865/nsr_wsb.php" #testing
 
 # Bad URLs for testing
 

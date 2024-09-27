@@ -65,9 +65,22 @@ NSR_political_divisions <- function(country = NULL, checklist = T, ...){
   
   #Return NULL if API isn't working
   if(!exists("results_json")){return(invisible(NULL))}
+  
+  # catch results if text isn't properly returned
+  
+  tryCatch(expr = {
+    results_raw <- fromJSON(rawToChar(results_json$content))
+    results_raw <- results_raw$nsr_results$nsr_result
+    },
+    error = function(e){
+      message("The API returned improperly formatted data")
+      })
 
-  results_raw <- fromJSON(rawToChar(results_json$content)) 
-  results_raw <- results_raw$nsr_results$nsr_result
+  # results_raw <- fromJSON(rawToChar(results_json$content)) 
+  # results_raw <- results_raw$nsr_results$nsr_result
+  
+  #Return NULL if API isn't working
+  if(!exists("results_raw")){return(invisible(NULL))}
 
   #If there were no results returned, print a message.  Otherwise, format the results and return them
   if(nrow(results_raw)==0){message("Country not found")}else{

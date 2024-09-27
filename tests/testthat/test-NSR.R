@@ -15,6 +15,6 @@ test_that("example works", {
 
   # test below assume a data dictionary and will be skipped if one isn't returned
   skip_if_not(class(results) == "data.frame")
-  expect_equal(object = nrow(results), expected = nrow(tnrs_testfile))
+  expect_equal(object = nrow(results), expected = nrow(nsr_testfile))
 })
 
