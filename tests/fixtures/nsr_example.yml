@@ -1,7 +1,7 @@
 http_interactions:
 - request:
     method: post
-    uri: http://vegbiendev.nceas.ucsb.edu:9865/nsr_wsb.php
+    uri: https://nsrapi.xyz/nsr_wsb.php
     body:
       encoding: ''
       string: '{"opts":{"mode":"resolve"},"data":[["Eucalyptus","Australia","Western
@@ -25,54 +25,54 @@ http_interactions:
       reason: OK
       message: 'Success: (200) OK'
     headers:
-      date: Fri, 27 Sep 2024 20:05:55 GMT
-      server: Apache/2.4.41 (Ubuntu)
+      date: Fri, 04 Oct 2024 15:40:11 GMT
+      server: Apache
       access-control-allow-origin: '*'
       content-length: '3989'
       content-type: application/json
     body:
       encoding: ''
       file: no
-      string: '{"id":["family","genus","species","country","state_province","county_parish","poldiv_full","poldiv_type","native_status_country","native_status_state_province","native_status_county_parish","native_status","native_status_reason","native_status_sources","isIntroduced","isCultivatedNSR","is_cultivated_taxon","user_id"],"476":["Myrtaceae","Eucalyptus","","Australia","Western
+      string: '{"id":["family","genus","species","country","state_province","county_parish","poldiv_full","poldiv_type","native_status_country","native_status_state_province","native_status_county_parish","native_status","native_status_reason","native_status_sources","isIntroduced","isCultivatedNSR","is_cultivated_taxon","user_id"],"553":["Myrtaceae","Eucalyptus","","Australia","Western
         Australia","","Australia:Western Australia","state_province","N","N","","N","Native
-        to region, as per checklist","powo","0","0","0","1"],"477":["","Abrothallus","Abrothallus
+        to region, as per checklist","powo","0","0","0","1"],"554":["","Abrothallus","Abrothallus
         bertianus","Austria","","","Austria","country","A","","","A","Absent from
-        all checklists for region","powo","1","0","0","2"],"478":["Arecaceae","Cocos","Cocos
+        all checklists for region","powo","1","0","0","2"],"555":["Arecaceae","Cocos","Cocos
         nucifera","Jamaica","","","Jamaica","country","I","","","I","Introduced to
-        region, as per checklist","fwi, powo, weakley","1","0","0","3"],"479":["Myrtaceae","Eucalyptus","","Mexico","","","Mexico","country","I","","","I","Introduced
-        to region, as per checklist","powo","1","0","0","4"],"480":["Zygophyllaceae","Larrea","Larrea
+        region, as per checklist","fwi, powo, weakley","1","0","0","3"],"556":["Myrtaceae","Eucalyptus","","Mexico","","","Mexico","country","I","","","I","Introduced
+        to region, as per checklist","powo","1","0","0","4"],"557":["Zygophyllaceae","Larrea","Larrea
         tridentata","Mexico","","","Mexico","country","N","","","N","Native to region,
-        as per checklist","mexico, powo","0","0","0","5"],"481":["Pinaceae","Pinus","Pinus
+        as per checklist","mexico, powo","0","0","0","5"],"558":["Pinaceae","Pinus","Pinus
         ayacahuite","Mexico","","","Mexico","country","N","","","N","Native to region,
-        as per checklist","mexico, powo","0","0","0","6"],"482":["Malvaceae","Ceiba","Ceiba
+        as per checklist","mexico, powo","0","0","0","6"],"559":["Malvaceae","Ceiba","Ceiba
         pentandra","Peru","","","Peru","country","N","","","N","Native to region,
-        as per checklist","powo, tropicos","0","0","0","7"],"483":["Pinaceae","Pinus","Pinus
+        as per checklist","powo, tropicos","0","0","0","7"],"560":["Pinaceae","Pinus","Pinus
         ayacahuite","Peru","","","Peru","country","A","","","A","Absent from all checklists
-        for region","powo, tropicos","1","0","0","8"],"484":["Pinaceae","Pinus","Pinus
+        for region","powo, tropicos","1","0","0","8"],"561":["Pinaceae","Pinus","Pinus
         ponderosa","Peru","","","Peru","country","A","","","A","Absent from all checklists
-        for region","powo, tropicos","1","0","0","9"],"485":["Pinaceae","Pinus","Pinus
+        for region","powo, tropicos","1","0","0","9"],"562":["Pinaceae","Pinus","Pinus
         ponderosa","United States","Arizona","Pima","United States:Arizona:Pima","county_parish","N","N","","N","Native
-        to region, as per checklist","powo, usda","0","0","0","10"],"486":["Zygophyllaceae","Larrea","Larrea
+        to region, as per checklist","powo, usda","0","0","0","10"],"563":["Zygophyllaceae","Larrea","Larrea
         tridentata","Argentina","","","Argentina","country","A","","","A","Absent
-        from all checklists for region","conosur, powo","1","0","0","11"],"487":["Pinaceae","Pinus","Pinus
+        from all checklists for region","conosur, powo","1","0","0","11"],"564":["Pinaceae","Pinus","Pinus
         ponderosa","Argentina","","","Argentina","country","I","","","I","Introduced
-        to region, as per checklist","conosur","1","0","0","12"],"488":["Malvaceae","Ceiba","Ceiba
+        to region, as per checklist","conosur","1","0","0","12"],"565":["Malvaceae","Ceiba","Ceiba
         pentandra","Brazil","Amazonas","","Brazil:Amazonas","state_province","N","N","","N","Native
-        to region, as per checklist","flbr, powo","0","0","0","13"],"489":["Malvaceae","Ceiba","Ceiba
+        to region, as per checklist","flbr, powo","0","0","0","13"],"566":["Malvaceae","Ceiba","Ceiba
         pentandra","Canada","","","Canada","country","A","","","A","Absent from all
-        checklists for region","powo, usda, vascan","1","0","0","14"],"490":["Asteraceae","Erigeron","Erigeron
+        checklists for region","powo, usda, vascan","1","0","0","14"],"567":["Asteraceae","Erigeron","Erigeron
         bonariensis","Jamaica","","","Jamaica","country","N","","","N","Native to
-        region, as per checklist","powo","0","0","0","15"],"491":["Cyrillaceae","Cyrilla","Cyrilla
+        region, as per checklist","powo","0","0","0","15"],"568":["Cyrillaceae","Cyrilla","Cyrilla
         racemiflora","Jamaica","","","Jamaica","country","N","","","N","Native to
-        region, as per checklist","fwi, powo","0","0","0","16"],"492":["Tetracentraceae","","","United
+        region, as per checklist","fwi, powo","0","0","0","16"],"569":["Tetracentraceae","","","United
         States","","","United States","country","A","","","A","Absent from all checklists
-        for region","powo, usda","1","0","0","17"],"493":["Pinaceae","","","United
+        for region","powo, usda","1","0","0","17"],"570":["Pinaceae","","","United
         States","","","United States","country","N","","","N","Native to region, as
-        per checklist","powo, usda","0","0","0","18"],"494":["Blandfordiaceae","","","Peru","","","Peru","country","Ie","","","Ie","Introduced,
-        species endemic to other region","mab","1","0","0","19"],"495":["Blandfordiaceae","","","United
+        per checklist","powo, usda","0","0","0","18"],"571":["Blandfordiaceae","","","Peru","","","Peru","country","Ie","","","Ie","Introduced,
+        species endemic to other region","mab","1","0","0","19"],"572":["Blandfordiaceae","","","United
         States","","","United States","country","Ie","","","Ie","Introduced, species
-        endemic to other region","mab","1","0","0","20"],"496":["Blandfordiaceae","","","Australia","","","Australia","country","Ne","","","Ne","Endemic
-        to region, as per checklist","mab","0","0","0","21"],"497":["Blandfordiaceae","","","France","","","France","country","Ie","","","Ie","Introduced,
+        endemic to other region","mab","1","0","0","20"],"573":["Blandfordiaceae","","","Australia","","","Australia","country","Ne","","","Ne","Endemic
+        to region, as per checklist","mab","0","0","0","21"],"574":["Blandfordiaceae","","","France","","","France","country","Ie","","","Ie","Introduced,
         species endemic to other region","mab","1","0","0","22"]}'
-  recorded_at: 2024-09-27 20:05:56 GMT
+  recorded_at: 2024-10-04 15:40:17 GMT
   recorded_with: vcr/1.6.0, webmockr/1.0.0

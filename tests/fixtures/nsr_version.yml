@@ -1,7 +1,7 @@
 http_interactions:
 - request:
     method: post
-    uri: http://vegbiendev.nceas.ucsb.edu:9865/nsr_wsb.php
+    uri: https://nsrapi.xyz/nsr_wsb.php
     body:
       encoding: ''
       string: '{"opts":{"mode":"meta"}}'
@@ -16,8 +16,8 @@ http_interactions:
       reason: OK
       message: 'Success: (200) OK'
     headers:
-      date: Fri, 27 Sep 2024 20:06:03 GMT
-      server: Apache/2.4.41 (Ubuntu)
+      date: Fri, 04 Oct 2024 15:40:28 GMT
+      server: Apache
       access-control-allow-origin: '*'
       content-length: '737'
       content-type: application/json
@@ -31,5 +31,5 @@ http_interactions:
         Y. B. and Enquist, B. J.}, journal = {Botanical Information and Ecology Network},
         title = {Native Species Resolver}, year = {2024}, url = {https:\/\/nsr.biendata.org\/},
         note = {Accessed <date_of_access>} }","publication":"","logo_path":"images\/"}}]'
-  recorded_at: 2024-09-27 20:06:03 GMT
+  recorded_at: 2024-10-04 15:40:26 GMT
   recorded_with: vcr/1.6.0, webmockr/1.0.0

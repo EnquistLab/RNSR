@@ -1,7 +1,7 @@
 http_interactions:
 - request:
     method: post
-    uri: http://vegbiendev.nceas.ucsb.edu:9865/nsr_wsb.php
+    uri: https://nsrapi.xyz/nsr_wsb.php
     body:
       encoding: ''
       string: '{"opts":{"mode":"dd"}}'
@@ -16,8 +16,8 @@ http_interactions:
       reason: OK
       message: 'Success: (200) OK'
     headers:
-      date: Fri, 27 Sep 2024 20:05:57 GMT
-      server: Apache/2.4.41 (Ubuntu)
+      date: Fri, 04 Oct 2024 15:40:20 GMT
+      server: Apache
       access-control-allow-origin: '*'
       content-length: '2484'
       content-type: application/json
@@ -45,5 +45,5 @@ http_interactions:
         blank=status unknown)"}},{"dd":{"col_name":"is_cultivated_taxon","ordinal_position":"17","data_type":"Integer
         (0|1)","description":"Is species known to be cultivated in region of observation?  (1=cultivated,  0=wild
         or status unknown)"}}]'
-  recorded_at: 2024-09-27 20:05:57 GMT
+  recorded_at: 2024-10-04 15:40:17 GMT
   recorded_with: vcr/1.6.0, webmockr/1.0.0
