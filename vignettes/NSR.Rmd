@@ -69,11 +69,11 @@ To access metadata for the sources currently consulted by the NSR, use the funct
 
 sources <- NSR_metadata()
 
-checklist_political_divisions <- NSR_political_divisions()
+checklist_per_political_divisions <- NSR_political_divisions()
 
-#To only return political division information for a given country, specify that county (or countries) in the field
+# If you'd rather see which political divisions are available within each checklist, set "by_country" to FALSE
 
-US_checklists <- NSR_political_divisions(country = "United States")
+political_divisions_per_checklist <- NSR_political_divisions(by_country = FALSE)
 
 
 ```
