@@ -3,9 +3,8 @@
 .RData
 doc
 Meta
-<<<<<<< HEAD:.gitignore
 misc
-=======
 /doc/
 /Meta/
->>>>>>> 59890a7c41b86cd35660cfd631b100dad5c55dc5:NSR/.gitignore
+.gitignore
+RNSR.Rproj
