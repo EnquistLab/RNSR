@@ -5,4 +5,5 @@
 ^misc$
 ^old_builds$
 ^.*\.git$
+^.*\.github$
 ^cran-comments\.md$
