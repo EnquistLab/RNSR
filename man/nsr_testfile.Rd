@@ -16,7 +16,7 @@ A data.frame with 22 observations of 5 variables:
 }
 }
 \source{
-\url{http://biendata.org}
+\url{https://biendata.org}
 }
 \usage{
 nsr_testfile

@@ -1,7 +1,7 @@
 #'Check the native status for plant species in a political region
 #'
 #'NSR returns information on native status for species within a political region.
-#' @param occurrence_dataframe A properly formatted dataframe, see http://bien.nceas.ucsb.edu/bien/tools/nsr/batch-mode/
+#' @param occurrence_dataframe A properly formatted dataframe, see https://bien.nceas.ucsb.edu/bien/tools/nsr/batch-mode/
 #' @param ... Additional arguments passed to internal functions.
 #' @return Dataframe containing NSR results.
 #' @export

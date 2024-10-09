@@ -7,7 +7,7 @@
 NSR(occurrence_dataframe, ...)
 }
 \arguments{
-\item{occurrence_dataframe}{A properly formatted dataframe, see http://bien.nceas.ucsb.edu/bien/tools/nsr/batch-mode/}
+\item{occurrence_dataframe}{A properly formatted dataframe, see https://bien.nceas.ucsb.edu/bien/tools/nsr/batch-mode/}
 
 \item{...}{Additional arguments passed to internal functions.}
 }

@@ -11,5 +11,5 @@
 #'   \item{user_id}{unique numeric ID that can be used to link to original dataset}
 #'   ...
 #' }
-#' @source \url{http://biendata.org}
+#' @source \url{https://biendata.org}
 "nsr_testfile"
