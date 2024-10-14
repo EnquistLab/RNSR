@@ -1,11 +1,11 @@
 Package: NSR
-Title: Tools to Access the Native Species Resolver
+Title: 'Native Status Resolver'
 Version: 0.1.0
 Authors@R: c(
             person("Brian", "Maitner", email = "bmaitner@gmail.com", role = c("aut", "cre")),
             person("Brad", "Boyle", email = "bboyle@email.arizona.edu", role = c("aut"))
             )
-Description: Provides tools for interacting with the Native Species Resolver (NSR) <https://github.com/ojalaquellueva/nsr> API through R. The user supplies plant taxonomic names and political divisions and the package returns information about their likely native status (e.g., native, non-native,endemic), along with information on how those decisions were made.
+Description: Provides access to the 'Native Status Resolver' (NSR) <https://github.com/ojalaquellueva/nsr> API through R. The user supplies plant taxonomic names and political divisions and the package returns information about their likely native status (e.g., native, non-native,endemic), along with information on how those decisions were made.
 Depends: 
         R (>= 3.5.0)
 License: MIT + file LICENSE
