@@ -1,29 +1,18 @@
 http_interactions:
 - request:
-    method: post
+    method: POST
     uri: https://nsrapi.xyz/nsr_wsb.php
     body:
-      encoding: ''
       string: '{"opts":{"mode":"dd_ns"}}'
-    headers:
-      Content-Type: application/json
-      Accept: application/json
-      charset: UTF-8
   response:
-    status:
-      status_code: 200
-      category: Success
-      reason: OK
-      message: 'Success: (200) OK'
+    status: 200
     headers:
-      date: Wed, 09 Oct 2024 20:35:11 GMT
+      date: Thu, 19 Feb 2026 19:12:04 GMT
       server: Apache
       access-control-allow-origin: '*'
       content-length: '880'
       content-type: application/json
     body:
-      encoding: ''
-      file: no
       string: '[{"dd_ns":{"val":"P","ordinal_position":"1","description":"Present
         in checklist for region of observation but no explicit status assigned"}},{"dd_ns":{"val":"N","ordinal_position":"2","description":"Native
         to region of observation"}},{"dd_ns":{"val":"Ne","ordinal_position":"3","description":"Native
@@ -33,5 +22,5 @@ http_interactions:
         to other region and therefore introduced in region of observation"}},{"dd_ns":{"val":"UNK","ordinal_position":"7","description":"Unknown,
         no checklists available for region of observation and taxon not known to be
         endemic elsewhere"}}]'
-  recorded_at: 2024-10-09 20:35:11 GMT
-  recorded_with: vcr/1.6.0, webmockr/1.0.0
+  recorded_at: 2026-02-19 19:12:02
+recorded_with: VCR-vcr/2.0.0

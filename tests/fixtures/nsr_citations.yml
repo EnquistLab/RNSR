@@ -1,29 +1,18 @@
 http_interactions:
 - request:
-    method: post
+    method: POST
     uri: https://nsrapi.xyz/nsr_wsb.php
     body:
-      encoding: ''
       string: '{"opts":{"mode":"citations"}}'
-    headers:
-      Content-Type: application/json
-      Accept: application/json
-      charset: UTF-8
   response:
-    status:
-      status_code: 200
-      category: Success
-      reason: OK
-      message: 'Success: (200) OK'
+    status: 200
     headers:
-      date: Wed, 09 Oct 2024 20:35:10 GMT
+      date: Thu, 19 Feb 2026 19:12:03 GMT
       server: Apache
       access-control-allow-origin: '*'
       content-length: '6152'
       content-type: application/json
     body:
-      encoding: ''
-      file: no
       string: '[{"citations":{"source":"nsr.app","citation":"@misc{nsr.app, author
         = {Boyle, B. L. and Maitner, B. and Barbosa, G. C. and Rethvick, S. Y. B.
         and Enquist, B. J.}, journal = {Botanical Information and Ecology Network},
@@ -99,5 +88,5 @@ http_interactions:
         D. and contributors}, doi = {http:\/\/doi.org\/10.3897\/phytokeys.25.3100},
         title = {{Database of Vascular Plants of Canada (VASCAN)}}, url = {http:\/\/data.canadensys.net\/vascan},
         urldate = {16 September 2024.}, year = {2024} }\\n"}}]'
-  recorded_at: 2024-10-09 20:35:11 GMT
-  recorded_with: vcr/1.6.0, webmockr/1.0.0
+  recorded_at: 2026-02-19 19:12:01
+recorded_with: VCR-vcr/2.0.0
