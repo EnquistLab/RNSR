@@ -62,28 +62,55 @@ NSR_from_coordinates <- function(occurrence_dataframe,
   # check the number of columns
   
     if(ncol(occurrence_dataframe) != 4){
-      stop("occurrence_dataframe should have 4 columns")}
-  
+      message("occurrence_dataframe should have 4 columns")
+      return(invisible(NULL))
+      }
+      
   # check column formats
   
     if(!inherits(occurrence_dataframe[,1],"character")){
-      stop("first column should be character")
+      message("first column should be character")
+      return(invisible(NULL))
     }
   
     if(!inherits(x = occurrence_dataframe[,2],what = c("numeric","integer","double"))){
-      stop("second column should be numeric")
+      message("second column should be numeric")
+      return(invisible(NULL))
     }
     
     if(!inherits(x = occurrence_dataframe[,3],what = c("numeric","integer","double"))){
-      stop("second column should be numeric")
+      message("second column should be numeric")
+      return(invisible(NULL))
     }
   
   # check that ID field is unique
   
     if(any(duplicated(occurrence_dataframe[,4]))){
-      stop("Duplicate IDs detected")
+      message("Duplicate IDs detected")
+      return(invisible(NULL))
     }
-    
+  
+  # check that there are no NAs in the data.frame
+  
+    if(any(is.na(occurrence_dataframe))){
+      message("NA values found in dataframe, please remove these records.")
+      return(invisible(NULL))
+    }
+  
+  # check for impossible coordinates
+  
+    if(any(occurrence_dataframe[,2] > 90 |
+           occurrence_dataframe[,2] < -90 |
+           occurrence_dataframe[,3] > 180 |
+           occurrence_dataframe[,3] < -180
+    )){
+      
+      message("Impossible coordinates found, please remove them before proceeding.")
+      return(invisible(NULL))
+      
+    }
+  
+  
   
   # prepare query
   
