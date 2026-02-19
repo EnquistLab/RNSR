@@ -3,6 +3,7 @@
 ===============
 
 ## NEW FEATURES
+* Added new function to check native status using species name and coordinates (NSR_from_coordinates)
 
 ## Bug fixes
 

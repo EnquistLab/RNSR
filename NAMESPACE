@@ -3,6 +3,7 @@
 export(NSR)
 export(NSR_citations)
 export(NSR_data_dictionary)
+export(NSR_from_coordinates)
 export(NSR_metadata)
 export(NSR_political_divisions)
 export(NSR_simple)
