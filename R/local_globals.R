@@ -4,7 +4,7 @@
 utils::globalVariables(c(
   ".", ".N", ".SD", ":=",
   "code", "conflict_type", "consulted_here", "fraction", "from_region",
-  "has_int", "has_nat", "in_place", "is_cultivated",
+  "has_int", "has_nat", "in_place", "is_cultivated", "is_extinct",
   "n_here", "n_in", "n_nat", "n_src_sets", "n_sub_int", "n_sub_nat",
   "ovl", "ovl_srcs", "qid", "r_ord", "reason", "region_key", "relation",
   "scope", "source_name", "srcs", "srcs_any",

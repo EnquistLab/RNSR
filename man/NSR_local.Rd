@@ -9,6 +9,7 @@ NSR_local(
   dir = nsr_cache_dir(),
   resolve_names = TRUE,
   min_overlap = 0.01,
+  exclude_extinct = TRUE,
   quiet = FALSE
 )
 }
@@ -22,6 +23,11 @@ or political division names (see Place).}
 \code{TNRS::TNRS_local()}?  Names already matching WCVP accepted names need none.}
 
 \item{min_overlap}{Ignore region links covering less than this share of a region.}
+
+\item{exclude_extinct}{Ignore distribution records the source marks extinct?  Default
+\code{TRUE}, which answers about the present day.  Set \code{FALSE} to model a past
+distribution, where a region the taxon has since been lost from still counts.  See
+Extinct records.}
 
 \item{quiet}{Suppress progress messages?}
 }
@@ -63,6 +69,21 @@ about the taxon's whole range rather than about one polygon, so they draw on evi
 from elsewhere.  A record of a taxon confined to California, found in Michigan, is
 introduced there however little Michigan's own checklists say.
 }
+\section{Extinct records}{
+
+WCVP marks a distribution extinct with a bare flag and no date, so the record says
+only "considered no longer present as of this release".  Whether it should count is
+therefore a property of the question rather than of the data: a present-day status
+wants it out, a historical distribution wants it in, and the cache keeps both so
+\code{exclude_extinct} can decide per call.
+
+Excluding it never makes the taxon introduced there.  The endemism rules read the
+taxon's whole native range, extinct records included, whatever this argument says -
+a region a taxon has been lost from is still a region it was native to, so \code{Ie}
+("introduced, inferred from endemism elsewhere") cannot fire against it.  The answer
+for such a record is \code{A}: gone, not foreign.
+}
+
 \section{County and parish}{
 
 \code{county_parish} is accepted and echoed, but not resolved: the political-division

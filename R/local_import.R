@@ -80,12 +80,17 @@ nsr_import_wcvp <- function(zip = NULL, bb, quiet = FALSE) {
   dist$rank_published <- nm$taxon_rank[match(acc, nm$plant_name_id)]
 
   flag <- function(x) !is.na(x) & x %in% c("1", 1, TRUE, "TRUE")
-  # An extinct record is not a standing distribution.  Left in, a taxon that no longer
-  # occurs in a region comes back native there, and counts as evaluable, which also moves
-  # absence and endemism answers elsewhere.  A DOUBTFUL record is kept, but only as
-  # "present": it is too weak to support native or introduced, and dropping it would let
-  # the region read as a confident absence when the source in fact records a maybe.
-  keep <- !is.na(dist$taxon_id) & !is.na(dist$taxon_name) & !flag(dist$extinct)
+  # Extinct records are KEPT and flagged rather than dropped here.  WCVP's `extinct` is a
+  # bare 0/1 with no date - it means "considered no longer present as of this release" -
+  # so whether it should count is a property of the question, not of the build: present-day
+  # status wants it out, a historical distribution wants it in.  NSR_local(exclude_extinct)
+  # decides at query time, which is only possible if the build keeps the row.  Dropping it
+  # here would also lose the fact that the taxon was ONCE native there, and the Ie rule
+  # needs that fact or it will call a natively extirpated record introduced.
+  # A DOUBTFUL record is kept as "present": too weak to support native or introduced, and
+  # dropping it would let the region read as a confident absence when the source in fact
+  # records a maybe.
+  keep <- !is.na(dist$taxon_id) & !is.na(dist$taxon_name)
   dist <- dist[keep, , drop = FALSE]
   j <- j[keep]                      # j indexes nm per dist row, so it is subset with it
 
@@ -95,7 +100,7 @@ nsr_import_wcvp <- function(zip = NULL, bb, quiet = FALSE) {
     rank = nm$taxon_rank[j],
     status = ifelse(flag(dist$location_doubtful), "present",
                     ifelse(flag(dist$introduced), "introduced", "native")),
-    is_cultivated = 0L,
+    is_cultivated = 0L, is_extinct = as.integer(flag(dist$extinct)),
     region_key = paste0("wgsrpd3:", dist$area_code_l3), region_name = dist$area,
     stringsAsFactors = FALSE
   )
@@ -171,7 +176,7 @@ nsr_import_vascan <- function(zip, bb, quiet = FALSE) {
   gid0 <- rep(NA_character_, nrow(di))
   gid0[is.na(gid1) & loc == "greenland"] <- "GRL"
   out <- data.frame(taxon_name = di$taxon_name, taxon_id = NA_character_, status = status,
-                    is_cultivated = 0L,
+                    is_cultivated = 0L, is_extinct = 0L,
                     region_key = ifelse(!is.na(gid1), paste0("gadm1:", gid1),
                                         ifelse(!is.na(gid0), paste0("gadm0:", gid0), NA_character_)),
                     region_name = di$locality, stringsAsFactors = FALSE)
@@ -214,6 +219,7 @@ nsr_import_flbr <- function(zip, bb, quiet = FALSE) {
   k <- match(hasc, bb$state$hasc_full)
   out <- data.frame(
     taxon_name = di$taxon_name, taxon_id = NA_character_, status = status, is_cultivated = cult,
+    is_extinct = 0L,
     region_key = ifelse(is.na(bb$state$gid_1[k]), NA_character_, paste0("gadm1:", bb$state$gid_1[k])),
     region_name = bb$state$state_province[k],
     stringsAsFactors = FALSE

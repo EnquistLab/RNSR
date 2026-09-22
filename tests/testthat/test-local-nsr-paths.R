@@ -7,12 +7,25 @@
 # a small world: Quebec in two geographies, inside Canada, plus a sliver of a region the
 # query only just touches
 fixture_db <- function() {
+  # one row per taxon x region x source; is_extinct only ever set by WCVP
+  spec <- c(
+    "t1 wgsrpd3:QUE    native     wcvp   0 0",
+    "t2 gadm0:CAN      introduced vascan 0 0",
+    "t3 wgsrpd3:ONT    native     wcvp   0 0",
+    "t3 wgsrpd3:BZL    native     wcvp   0 0",
+    "t4 wgsrpd3:QUE    present    wcvp   1 0",
+    "t4 gadm1:CAN.11_1 native     vascan 0 0",
+    "t5 gadm1:CAN.11_1 native     vascan 0 0",
+    "t5 gadm1:CAN.4_1  native     vascan 0 0",
+    # t6 was native in Quebec and has been lost from it; it survives only in Brazil
+    "t6 wgsrpd3:QUE    native     wcvp   0 1",
+    "t6 wgsrpd3:BZL    native     wcvp   0 0",
+    # t7 is the contrast: native ONLY in Brazil, never recorded in Quebec at all
+    "t7 wgsrpd3:BZL    native     wcvp   0 0")
+  f <- do.call(rbind, strsplit(trimws(spec), "[[:space:]]+"))
   checklist <- data.frame(
-    taxon_id   = c("t1",          "t2",        "t3",          "t3",          "t4",          "t4",             "t5",             "t5"),
-    region_key = c("wgsrpd3:QUE", "gadm0:CAN", "wgsrpd3:ONT", "wgsrpd3:BZL", "wgsrpd3:QUE", "gadm1:CAN.11_1", "gadm1:CAN.11_1", "gadm1:CAN.4_1"),
-    status     = c("native",      "introduced", "native",     "native",      "present",     "native",         "native",         "native"),
-    source_name = c("wcvp",       "vascan",    "wcvp",        "wcvp",        "wcvp",        "vascan",         "vascan",         "vascan"),
-    is_cultivated = c(0L,          0L,          0L,            0L,            1L,            0L,               0L,               0L),
+    taxon_id = f[, 1], region_key = f[, 2], status = f[, 3], source_name = f[, 4],
+    is_cultivated = as.integer(f[, 5]), is_extinct = as.integer(f[, 6]),
     stringsAsFactors = FALSE)
   links <- data.frame(
     from_region = c("gadm1:CAN.11_1", "wgsrpd3:QUE",    "gadm1:CAN.11_1"),
@@ -21,8 +34,8 @@ fixture_db <- function() {
     fraction    = c(0.99,             0.99,             0.001),
     stringsAsFactors = FALSE)
   taxa <- data.frame(
-    taxon_id = c("t1", "t2", "t3", "t4"),
-    species_name = c("Sp one", "Sp two", "Sp three", "Sp four"),
+    taxon_id = paste0("t", 1:7),
+    species_name = paste("Sp", 1:7),
     family = "Fam", genus = "Gen", rank = "species", stringsAsFactors = FALSE)
   sources <- data.frame(source_name = c("wcvp", "vascan"), is_comprehensive = TRUE,
                         stringsAsFactors = FALSE)
@@ -142,6 +155,36 @@ test_that("a range confined to one country's states is confined to that country"
   expect_equal(set$code, "Ie")
   expect_match(row$reason, "Canada")
   expect_match(set$reason, "Canada")
+})
+
+# WCVP's extinct flag carries no date, so whether it counts belongs to the question
+# rather than to the build: the cache keeps the row and the query decides.
+test_that("exclude_extinct decides whether a lost population still answers", {
+  skip_if_not_installed("data.table")
+  db <- fixture_db()
+  places <- list(fine = list("gadm1:CAN.11_1"), country = list(character(0)))
+  for (f in list(NSR:::nsr_resolve_status, NSR:::nsr_resolve_status_set)) {
+    gone <- f("t6", places, db, 0.01, exclude_extinct = TRUE)
+    past <- f("t6", places, db, 0.01, exclude_extinct = FALSE)
+    # present day: it is not there any more
+    expect_equal(gone$code, "A")
+    # as a historical distribution: it was native there
+    expect_equal(past$code, "N")
+  }
+})
+
+test_that("a lost population is absent, never introduced", {
+  skip_if_not_installed("data.table")
+  db <- fixture_db()
+  places <- list(fine = list("gadm1:CAN.11_1"), country = list(character(0)))
+  # t7 is native only in Brazil and was never in Quebec, so Quebec is an inferred
+  # introduction - this is the machinery that must NOT fire for t6
+  expect_equal(NSR:::nsr_resolve_status("t7", places, db)$code, "Ie")
+  expect_equal(NSR:::nsr_resolve_status_set("t7", places, db)$code, "Ie")
+  # t6's surviving range is equally confined to Brazil, but Quebec is part of its native
+  # range whether or not the extinct record answers, so absence there is loss, not arrival
+  expect_equal(NSR:::nsr_resolve_status("t6", places, db)$code, "A")
+  expect_equal(NSR:::nsr_resolve_status_set("t6", places, db)$code, "A")
 })
 
 test_that("min_overlap keeps slivers out of the consulted set", {

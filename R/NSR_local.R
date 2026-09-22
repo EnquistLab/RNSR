@@ -37,9 +37,25 @@
 #' @param resolve_names Resolve submitted names against WCVP with
 #'   \code{TNRS::TNRS_local()}?  Names already matching WCVP accepted names need none.
 #' @param min_overlap Ignore region links covering less than this share of a region.
+#' @param exclude_extinct Ignore distribution records the source marks extinct?  Default
+#'   \code{TRUE}, which answers about the present day.  Set \code{FALSE} to model a past
+#'   distribution, where a region the taxon has since been lost from still counts.  See
+#'   Extinct records.
 #' @param quiet Suppress progress messages?
 #' @return A data.frame, one row per input row, carrying \code{user_id} from the input
 #'   (or sequential ids where the input has none), as \code{\link{NSR}} does.
+#' @section Extinct records:
+#' WCVP marks a distribution extinct with a bare flag and no date, so the record says
+#' only "considered no longer present as of this release".  Whether it should count is
+#' therefore a property of the question rather than of the data: a present-day status
+#' wants it out, a historical distribution wants it in, and the cache keeps both so
+#' \code{exclude_extinct} can decide per call.
+#'
+#' Excluding it never makes the taxon introduced there.  The endemism rules read the
+#' taxon's whole native range, extinct records included, whatever this argument says -
+#' a region a taxon has been lost from is still a region it was native to, so \code{Ie}
+#' ("introduced, inferred from endemism elsewhere") cannot fire against it.  The answer
+#' for such a record is \code{A}: gone, not foreign.
 #' @section County and parish:
 #' \code{county_parish} is accepted and echoed, but not resolved: the political-division
 #' backbone stops at state and province, so \code{native_status_county_parish} is always
@@ -47,7 +63,7 @@
 #' warning says so.  Coordinates are the way to ask a finer question.
 #' @export
 NSR_local <- function(occurrence_dataframe, dir = nsr_cache_dir(), resolve_names = TRUE,
-                      min_overlap = 0.01, quiet = FALSE) {
+                      min_overlap = 0.01, exclude_extinct = TRUE, quiet = FALSE) {
   if (!inherits(occurrence_dataframe, "data.frame")) {
     stop("occurrence_dataframe should be a data.frame", call. = FALSE)
   }
@@ -99,8 +115,8 @@ NSR_local <- function(occurrence_dataframe, dir = nsr_cache_dir(), resolve_names
 
   # ---- opinions ---------------------------------------------------------------------
   use_set <- !is.null(db$chk_dt) && nrow(occurrence_dataframe) >= getOption("NSR.set_min", 200)
-  res <- if (use_set) nsr_resolve_status_set(taxon_id, places, db, min_overlap) else
-    nsr_resolve_status(taxon_id, places, db, min_overlap)
+  res <- if (use_set) nsr_resolve_status_set(taxon_id, places, db, min_overlap, exclude_extinct)
+         else nsr_resolve_status(taxon_id, places, db, min_overlap, exclude_extinct)
 
   out <- data.frame(
     family = db$taxa$family[match(taxon_id, db$taxa$taxon_id)],
@@ -175,6 +191,9 @@ nsr_local_db <- function(dir) {
 #' @keywords internal
 #' @noRd
 nsr_index_db <- function(db) {
+  # Caches built before extinct records were retained have no such column; they simply
+  # hold no extinct rows, so 0 is the truth for every row they do hold.
+  if (is.null(db$checklist$is_extinct)) db$checklist$is_extinct <- 0L
   db$link_idx <- split(seq_len(nrow(db$links)), db$links$from_region)
   db$chk_idx <- split(seq_len(nrow(db$checklist)),
                       paste(db$checklist$taxon_id, db$checklist$region_key))
@@ -220,6 +239,7 @@ nsr_index_db <- function(db) {
   db$chk_status <- db$checklist$status
   db$chk_source <- db$checklist$source_name
   db$chk_cult <- db$checklist$is_cultivated
+  db$chk_extinct <- as.integer(db$checklist$is_extinct) %in% 1L
   db$chk_region <- db$checklist$region_key
   db$link_to <- db$links$to_region
   db$link_rel <- db$links$relation
@@ -284,7 +304,8 @@ nsr_query_regions <- function(lon, lat, country, state, county, dir, db) {
 #' Gather and reduce every opinion bearing on each row
 #' @keywords internal
 #' @noRd
-nsr_resolve_status <- function(taxon_id, places, db, min_overlap = 0.01) {
+nsr_resolve_status <- function(taxon_id, places, db, min_overlap = 0.01,
+                               exclude_extinct = TRUE) {
   n <- length(taxon_id)
   blank <- rep(NA_character_, n)
   out <- list(code = blank, reason = blank, sources = blank, opinions = blank,
@@ -309,13 +330,14 @@ nsr_resolve_status <- function(taxon_id, places, db, min_overlap = 0.01) {
       out$n_sub_introduced[i] <- 0L
       next
     }
-    op <- nsr_opinions_for(tid, keys, db, min_overlap)
+    op <- nsr_opinions_for(tid, keys, db, min_overlap, exclude_extinct)
     # a coarser polygon the place sits in (its country) also contains it, so opinions
     # recorded ON that polygon apply; its OTHER sub-polygons do not, so only direct rows
     # are taken, never its links
     anc <- setdiff(ctry, keys)
     if (length(anc)) {
       rows <- unlist(mget(paste(tid, anc), db$chk_env, ifnotfound = list(NULL)), use.names = FALSE)
+      if (exclude_extinct && length(rows)) rows <- rows[!db$chk_extinct[rows]]
       if (length(rows)) {
         add <- list(status = db$chk_status[rows], source_name = db$chk_source[rows],
                     is_cultivated = db$chk_cult[rows], relation = rep("within", length(rows)))
@@ -340,11 +362,11 @@ nsr_resolve_status <- function(taxon_id, places, db, min_overlap = 0.01) {
     for (f in names(r)) out[[f]][i] <- r[[f]]
     # per-level codes, for the service's columns
     out$country_code[i] <- if (length(ctry)) {
-      nsr_reduce(nsr_opinions_for(tid, ctry, db, min_overlap),
+      nsr_reduce(nsr_opinions_for(tid, ctry, db, min_overlap, exclude_extinct),
                  nsr_consulted_regions(ctry, db, min_overlap), ev, db)$code
     } else NA_character_
     out$state_code[i] <- if (length(fine)) {
-      nsr_reduce(nsr_opinions_for(tid, fine, db, min_overlap),
+      nsr_reduce(nsr_opinions_for(tid, fine, db, min_overlap, exclude_extinct),
                  nsr_consulted_regions(fine, db, min_overlap), ev, db)$code
     } else NA_character_
   }
@@ -381,9 +403,11 @@ nsr_gadm_parents <- function(keys, db) {
 #' inheritance rules.
 #' @keywords internal
 #' @noRd
-nsr_opinions_for <- function(taxon_id, keys, db, min_overlap = 0.01) {
+nsr_opinions_for <- function(taxon_id, keys, db, min_overlap = 0.01, exclude_extinct = TRUE) {
   if (!length(keys)) return(NULL)
-  rows <- unlist(mget(paste(taxon_id, keys), db$chk_env, ifnotfound = list(NULL)), use.names = FALSE)
+  live <- function(r) if (exclude_extinct && length(r)) r[!db$chk_extinct[r]] else r
+  rows <- live(unlist(mget(paste(taxon_id, keys), db$chk_env, ifnotfound = list(NULL)),
+                      use.names = FALSE))
   rel <- if (length(rows)) rep("same", length(rows)) else character(0)
   li <- unlist(mget(keys, db$link_env, ifnotfound = list(NULL)), use.names = FALSE)
   if (length(li)) {
@@ -392,7 +416,7 @@ nsr_opinions_for <- function(taxon_id, keys, db, min_overlap = 0.01) {
     good <- !(to %in% keys) & fr >= min_overlap & !(sub(":.*", "", to) %in% known)
     if (any(good)) {
       to <- to[good]; rl <- rl[good]
-      idx <- mget(paste(taxon_id, to), db$chk_env, ifnotfound = list(NULL))
+      idx <- lapply(mget(paste(taxon_id, to), db$chk_env, ifnotfound = list(NULL)), live)
       n <- lengths(idx)
       if (sum(n)) {
         rows <- c(rows, unlist(idx, use.names = FALSE))
@@ -407,7 +431,7 @@ nsr_opinions_for <- function(taxon_id, keys, db, min_overlap = 0.01) {
   # reach it.
   kids <- nsr_gadm_children(keys, db)
   if (length(kids)) {
-    idx <- mget(paste(taxon_id, kids), db$chk_env, ifnotfound = list(NULL))
+    idx <- lapply(mget(paste(taxon_id, kids), db$chk_env, ifnotfound = list(NULL)), live)
     if (sum(lengths(idx))) {
       rows <- c(rows, unlist(idx, use.names = FALSE))
       rel <- c(rel, rep("contains", sum(lengths(idx))))

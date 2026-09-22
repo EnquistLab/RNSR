@@ -63,6 +63,8 @@ nsr_confined_ranges <- function(nat, db) {
 #' @param country_keys Optional country polygons (\code{"gadm0:BRA"}), same shape.
 #' @param dir Cache directory.
 #' @param min_overlap Ignore region links covering less than this share of a region.
+#' @param exclude_extinct Ignore distribution records the source marks extinct?  See
+#'   \code{\link{NSR_local}}.
 #' @return A data.frame with \code{native_status} and the status columns
 #'   \code{NSR_local()} returns, keyed on \code{taxon_id}.  It does not echo the input
 #'   columns \code{NSR_local()} carries through (\code{species}, the division names,
@@ -70,7 +72,8 @@ nsr_confined_ranges <- function(nat, db) {
 #'   a record.
 #' @export
 NSR_local_by_region <- function(taxon_id, region_keys, country_keys = NULL,
-                                dir = nsr_cache_dir(), min_overlap = 0.01) {
+                                dir = nsr_cache_dir(), min_overlap = 0.01,
+                                exclude_extinct = TRUE) {
   if (!is.list(region_keys)) region_keys <- as.list(region_keys)
   if (is.null(country_keys)) country_keys <- vector("list", length(taxon_id))
   if (!is.list(country_keys)) country_keys <- as.list(country_keys)
@@ -79,8 +82,9 @@ NSR_local_by_region <- function(taxon_id, region_keys, country_keys = NULL,
   db <- nsr_local_db(dir)
   clean <- function(z) { z <- z[!is.na(z) & nzchar(z)]; if (!length(z)) character(0) else z }
   places <- list(fine = lapply(region_keys, clean), country = lapply(country_keys, clean))
-  res <- if (!is.null(db$chk_dt)) nsr_resolve_status_set(as.character(taxon_id), places, db, min_overlap)
-         else nsr_resolve_status(as.character(taxon_id), places, db, min_overlap)
+  res <- if (!is.null(db$chk_dt))
+           nsr_resolve_status_set(as.character(taxon_id), places, db, min_overlap, exclude_extinct)
+         else nsr_resolve_status(as.character(taxon_id), places, db, min_overlap, exclude_extinct)
   data.frame(taxon_id = as.character(taxon_id),
              native_status_country = res$country_code,
              native_status_state_province = res$state_code,
@@ -108,9 +112,11 @@ NSR_local_by_region <- function(taxon_id, region_keys, country_keys = NULL,
 #' implementations agree column for column.
 #' @keywords internal
 #' @noRd
-nsr_resolve_status_set <- function(taxon_id, places, db, min_overlap = 0.01) {
+nsr_resolve_status_set <- function(taxon_id, places, db, min_overlap = 0.01,
+                                   exclude_extinct = TRUE) {
   n <- length(taxon_id)
-  out <- nsr_resolve_status_set1(taxon_id, places, db, min_overlap, endemism = TRUE)
+  out <- nsr_resolve_status_set1(taxon_id, places, db, min_overlap, endemism = TRUE,
+                                 exclude_extinct = exclude_extinct)
   empty <- rep(list(character(0)), n)
   # a level reports a code only when it was asked about AND there is a taxon to ask
   # about: with no match in the backbone no lookup happened at any level, which is what
@@ -120,12 +126,14 @@ nsr_resolve_status_set <- function(taxon_id, places, db, min_overlap = 0.01) {
   nf <- lengths(places$fine)
   if (any(nc > 0)) {
     lv <- nsr_resolve_status_set1(taxon_id, list(fine = empty, country = places$country),
-                                  db, min_overlap, endemism = FALSE)
+                                  db, min_overlap, endemism = FALSE,
+                                  exclude_extinct = exclude_extinct)
     out$country_code <- ifelse(asked & nc > 0, lv$code, NA_character_)
   }
   if (any(nf > 0)) {
     lv <- nsr_resolve_status_set1(taxon_id, list(fine = places$fine, country = empty),
-                                  db, min_overlap, endemism = FALSE)
+                                  db, min_overlap, endemism = FALSE,
+                                  exclude_extinct = exclude_extinct)
     out$state_code <- ifelse(asked & nf > 0, lv$code, NA_character_)
   }
   out
@@ -135,7 +143,7 @@ nsr_resolve_status_set <- function(taxon_id, places, db, min_overlap = 0.01) {
 #' @keywords internal
 #' @noRd
 nsr_resolve_status_set1 <- function(taxon_id, places, db, min_overlap = 0.01,
-                                    endemism = TRUE) {
+                                    endemism = TRUE, exclude_extinct = TRUE) {
   dt <- function(...) data.table::data.table(...)
   n <- length(taxon_id)
   blank <- rep(NA_character_, n)
@@ -193,6 +201,8 @@ nsr_resolve_status_set1 <- function(taxon_id, places, db, min_overlap = 0.01,
 
   # the opinions themselves
   O <- db$chk_dt[Q, on = c("taxon_id", "region_key"), nomatch = 0L, allow.cartesian = TRUE]
+  # after the join, so the checklist is never copied just to drop 0.14% of its rows
+  if (exclude_extinct && nrow(O) && "is_extinct" %in% names(O)) O <- O[is_extinct == 0L]
   if (!nrow(O)) return(nsr_set_finish(out, taxon_id, db, n, Q, endemism = endemism))
 
   O[, `:=`(inc = relation %in% c("same", "within"), sub = relation == "contains",

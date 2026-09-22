@@ -9,7 +9,8 @@ NSR_local_by_region(
   region_keys,
   country_keys = NULL,
   dir = nsr_cache_dir(),
-  min_overlap = 0.01
+  min_overlap = 0.01,
+  exclude_extinct = TRUE
 )
 }
 \arguments{
@@ -24,6 +25,9 @@ one polygon each.}
 \item{dir}{Cache directory.}
 
 \item{min_overlap}{Ignore region links covering less than this share of a region.}
+
+\item{exclude_extinct}{Ignore distribution records the source marks extinct?  See
+\code{\link{NSR_local}}.}
 }
 \value{
 A data.frame with \code{native_status} and the status columns

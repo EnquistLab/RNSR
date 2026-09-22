@@ -90,6 +90,23 @@ resolution WCVP gives us) is too coarse to say anything about sub-country status
 | **vascan** | Canada, by province; native/introduced/ephemeral | DwC-A, `data.canadensys.net/ipt/archive.do?r=vascan`, ~10 MB, updated 2026-08-04 | CC0 |
 | **flbr** | Brazil, by state; native/naturalised/cultivated | DwC-A, `ipt.jbrj.gov.br/jbrj/archive.do?r=lista_especies_flora_brasil`, ~50-100 MB | CC BY 4.0 |
 
+**Extinct records are kept and filtered at query time (BM, 2026-09-22):** WCVP's
+`extinct` is a bare 0/1 with no date or year - checked against the v15 distribution table,
+whose only columns are `plant_locality_id, plant_name_id, continent_code_l1, continent,
+region_code_l2, region, area_code_l3, area, introduced, extinct, location_doubtful`. It
+therefore means "considered no longer present as of this release" and cannot be compared
+against an occurrence's own date. Whether it should count is a property of the question,
+so the build keeps the row with an `is_extinct` flag and `NSR_local(exclude_extinct = TRUE)`
+decides per call: the default answers about the present day, `FALSE` models a past
+distribution. 2,701 of 1,970,252 rows are affected, over 2,393 taxa; 906 of those taxa have
+no surviving native record at all.
+
+Independently of that switch, the endemism rules always read the taxon's whole native
+range, extinct records included. A region a taxon has been lost from is still a region it
+was native to, so `Ie` must not fire against it - the answer for a natively extirpated
+record is `A` (gone), never `I`/`Ie` (arrived). Filtering at build time, as the garden
+pipeline's script 02 does, would have destroyed the evidence needed for that distinction.
+
 **The source is named `wcvp`, not `powo` (BM, 2026-09-22):** it is the WCVP archive that is
 read, and it is what `TNRS_local(sources = "wcvp")` calls the same data, so the stack uses one
 name for one dataset. `"powo"` is accepted as a synonym in `sources =` and in `files =`. The

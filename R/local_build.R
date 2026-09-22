@@ -105,7 +105,9 @@ NSR_local_build <- function(sources = "wcvp",
     d$taxon_id[fill] <- res$taxon_id[match(d$taxon_name[fill], res$name)]
     d <- d[!is.na(d$taxon_id) & !is.na(d$region_key), , drop = FALSE]
     data.frame(taxon_id = d$taxon_id, region_key = d$region_key, status = d$status,
-               is_cultivated = d$is_cultivated, source_name = s, stringsAsFactors = FALSE)
+               is_cultivated = d$is_cultivated,
+               is_extinct = if (is.null(d$is_extinct)) 0L else as.integer(d$is_extinct),
+               source_name = s, stringsAsFactors = FALSE)
   })
   checklist <- unique(do.call(rbind, c(list(keep_old(existing$checklist, "source_name")), chk)))
 

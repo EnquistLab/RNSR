@@ -9,6 +9,11 @@
   NSR_local_by_region() alongside it.  The checklist sources are acquired on the user's
   machine; nothing derived ships with the package.  The offline path needs data.table,
   nanoparquet, terra, sf and TNRS, all of which are Suggests.
+* NSR_local() gains exclude_extinct (default TRUE).  WCVP flags a distribution extinct
+  without a date, so the cache keeps those records and the query decides: the default
+  answers about the present day, FALSE models a past distribution.  Either way a region
+  a taxon has been lost from stays part of its native range, so such a record is
+  reported absent rather than introduced.
 
 ## Bug fixes
 
