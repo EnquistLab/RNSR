@@ -148,23 +148,50 @@ NSR_local_build <- function(sources = "wcvp",
                n_records = nrow(checklist), n_taxa = nrow(taxa), n_regions = nrow(regions)),
           nsr_provenance_path("nsr", dir))
 
+  # ---- geography ---------------------------------------------------------------------
   # The WGSRPD raster is what places coordinates in a WCVP region, so it is needed
   # whenever a source publishes against WGSRPD - not only when there is a second
   # geography to link it to.  A wcvp-only build needs it just as much.
   systems <- unique(regions$system)
+  raster_ok <- TRUE
   if ("wgsrpd3" %in% systems && !file.exists(nsr_raster_path("wgsrpd3", dir))) {
     msg("Building the WGSRPD level-3 raster ...")
-    try(nsr_build_wgsrpd_raster(dir = dir, quiet = quiet), silent = FALSE)
+    r <- try(nsr_build_wgsrpd_raster(dir = dir, quiet = quiet), silent = TRUE)
+    raster_ok <- !inherits(r, "try-error")
+    if (!raster_ok) {
+      warning("The WGSRPD level-3 raster could not be built: ",
+              conditionMessage(attr(r, "condition")), "
+",
+              "The checklist tables are written, but until this raster exists no query ",
+              "can reach a WCVP opinion: coordinates cannot be placed in a WCVP region, ",
+              "and division names resolve to GADM, which needs the link table below. ",
+              "Install 'rWCVPdata' (or 'rWCVP'), then re-run NSR_local_build(overwrite = TRUE).",
+              call. = FALSE)
+    }
   }
 
-  # spatial links between geographies, where GVS's GADM index is available
-  if (length(systems) > 1 && file.exists(file.path(dir, "gadmindex-units-30s.tif"))) {
-    msg("Linking region systems (", paste(systems, collapse = ", "), ") ...")
-    try(nsr_build_region_links(dir = dir, quiet = quiet), silent = FALSE)
-  } else if (length(systems) > 1) {
-    warning("Sources use several geographies but GVS's GADM index is not in the cache, ",
-            "so they cannot be linked; queries by division name will only see their own system.",
-            call. = FALSE)
+  # Names always resolve to GADM through the GNRS backbone, whatever geography the
+  # sources use, so a WGSRPD source is unreachable by name until the two are linked.
+  # That holds for a wcvp-only build as much as a mixed one - hence no test on the
+  # number of systems, which is what used to leave the default build unanswerable.
+  needs_links <- "wgsrpd3" %in% systems || length(systems) > 1
+  gadm_index <- file.path(dir, "gadmindex-units-30s.tif")
+  if (needs_links && raster_ok && file.exists(gadm_index)) {
+    msg("Linking region systems (", paste(c(systems, "gadm"), collapse = ", "), ") ...")
+    r <- try(nsr_build_region_links(dir = dir, quiet = quiet), silent = TRUE)
+    if (inherits(r, "try-error")) {
+      warning("The region link table could not be built: ",
+              conditionMessage(attr(r, "condition")), "
+",
+              "The cache is written, but queries by division name will not reach sources ",
+              "published against another geography. Re-run NSR_local_build(overwrite = TRUE) ",
+              "once the cause is fixed.", call. = FALSE)
+    }
+  } else if (needs_links && raster_ok) {
+    warning("GVS's GADM index is not in ", dir, ", so the geographies cannot be linked. ",
+            "Queries by division name resolve to GADM and will not reach sources published ",
+            "against WGSRPD; coordinates still work. Build it with GVS, then re-run ",
+            "NSR_local_build(overwrite = TRUE).", call. = FALSE)
   }
   msg("Built: ", format(nrow(checklist), big.mark = ","), " checklist records, ",
       format(nrow(taxa), big.mark = ","), " taxa, ", format(nrow(regions), big.mark = ","),

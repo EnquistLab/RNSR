@@ -30,6 +30,13 @@ nsr_confined_ranges <- function(nat, db) {
     lk <- db$links_dt[relation %in% c("same", "within") &
                         startsWith(to_region, "gadm0:"),
                       list(region_key = from_region, country = to_region)]
+    if (!is.null(db$gadm_edges_dt) && nrow(db$gadm_edges_dt)) {
+      lk <- unique(data.table::rbindlist(list(
+        lk,
+        db$gadm_edges_dt[relation == "within",
+                         list(region_key = from_region, country = to_region)]),
+        use.names = TRUE))
+    }
     m <- merge(nat[taxon_id %in% multi$taxon_id], lk, by = "region_key", allow.cartesian = TRUE)
     per <- m[, list(n_in = data.table::uniqueN(region_key)), by = c("taxon_id", "country")]
     per <- merge(per, multi, by = "taxon_id")
@@ -56,8 +63,11 @@ nsr_confined_ranges <- function(nat, db) {
 #' @param country_keys Optional country polygons (\code{"gadm0:BRA"}), same shape.
 #' @param dir Cache directory.
 #' @param min_overlap Ignore region links covering less than this share of a region.
-#' @return A data.frame with \code{native_status} and the same companion columns
-#'   \code{NSR_local()} returns.
+#' @return A data.frame with \code{native_status} and the status columns
+#'   \code{NSR_local()} returns, keyed on \code{taxon_id}.  It does not echo the input
+#'   columns \code{NSR_local()} carries through (\code{species}, the division names,
+#'   \code{user_id}), since this entry point is given ids and polygon keys rather than
+#'   a record.
 #' @export
 NSR_local_by_region <- function(taxon_id, region_keys, country_keys = NULL,
                                 dir = nsr_cache_dir(), min_overlap = 0.01) {
@@ -72,9 +82,13 @@ NSR_local_by_region <- function(taxon_id, region_keys, country_keys = NULL,
   res <- if (!is.null(db$chk_dt)) nsr_resolve_status_set(as.character(taxon_id), places, db, min_overlap)
          else nsr_resolve_status(as.character(taxon_id), places, db, min_overlap)
   data.frame(taxon_id = as.character(taxon_id),
+             native_status_country = res$country_code,
+             native_status_state_province = res$state_code,
              native_status = res$code, native_status_reason = res$reason,
              native_status_sources = res$sources, native_status_opinions = res$opinions,
-             native_status_scope = res$scope, native_status_conflict_type = res$conflict_type,
+             native_status_scope = res$scope,
+             native_status_conflict = res$conflict,
+             native_status_conflict_type = res$conflict_type,
              isIntroduced = as.integer(res$code %in% c("I", "Ie")),
              isEndemic = as.integer(res$code == "Ne"),
              isCultivatedNSR = res$cultivated,
@@ -158,6 +172,18 @@ nsr_resolve_status_set1 <- function(taxon_id, places, db, min_overlap = 0.01,
     L <- L[fraction >= min_overlap & to_region != from_region,
            .(qid, region_key = to_region, relation = relation, taxon_id)]
     Q <- data.table::rbindlist(list(Q, L), use.names = TRUE)
+  }
+  # GADM's exact parent/child containment, joined on the query's OWN polygons only so a
+  # country's other states never reach a state-level query.  Deliberately after the
+  # min_overlap filter: these edges carry no fraction because the containment is exact.
+  if (!is.null(db$gadm_edges_dt) && nrow(db$gadm_edges_dt)) {
+    H <- db$gadm_edges_dt[relation == "contains"][own, on = c(from_region = "region_key"),
+                                                  nomatch = 0L, allow.cartesian = TRUE]
+    if (nrow(H)) {
+      Q <- data.table::rbindlist(
+        list(Q, H[to_region != from_region, .(qid, region_key = to_region, relation, taxon_id)]),
+        use.names = TRUE)
+    }
   }
   # keep the strongest relation per (query, polygon)
   ord <- c(same = 1L, within = 2L, contains = 3L, overlaps = 4L)

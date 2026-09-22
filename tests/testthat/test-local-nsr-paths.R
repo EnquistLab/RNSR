@@ -8,11 +8,11 @@
 # query only just touches
 fixture_db <- function() {
   checklist <- data.frame(
-    taxon_id   = c("t1",          "t2",        "t3",          "t3",          "t4",          "t4"),
-    region_key = c("wgsrpd3:QUE", "gadm0:CAN", "wgsrpd3:ONT", "wgsrpd3:BZL", "wgsrpd3:QUE", "gadm1:CAN.11_1"),
-    status     = c("native",      "introduced", "native",     "native",      "present",     "native"),
-    source_name = c("wcvp",       "vascan",    "wcvp",        "wcvp",        "wcvp",        "vascan"),
-    is_cultivated = c(0L,          0L,          0L,            0L,            1L,            0L),
+    taxon_id   = c("t1",          "t2",        "t3",          "t3",          "t4",          "t4",             "t5",             "t5"),
+    region_key = c("wgsrpd3:QUE", "gadm0:CAN", "wgsrpd3:ONT", "wgsrpd3:BZL", "wgsrpd3:QUE", "gadm1:CAN.11_1", "gadm1:CAN.11_1", "gadm1:CAN.4_1"),
+    status     = c("native",      "introduced", "native",     "native",      "present",     "native",         "native",         "native"),
+    source_name = c("wcvp",       "vascan",    "wcvp",        "wcvp",        "wcvp",        "vascan",         "vascan",         "vascan"),
+    is_cultivated = c(0L,          0L,          0L,            0L,            1L,            0L,               0L,               0L),
     stringsAsFactors = FALSE)
   links <- data.frame(
     from_region = c("gadm1:CAN.11_1", "wgsrpd3:QUE",    "gadm1:CAN.11_1"),
@@ -28,10 +28,11 @@ fixture_db <- function() {
                         stringsAsFactors = FALSE)
   regions <- data.frame(
     region_key = c("wgsrpd3:QUE", "wgsrpd3:ONT", "wgsrpd3:BZL", "wgsrpd3:SLIVER",
-                   "gadm1:CAN.11_1", "gadm0:CAN"),
-    region_name = c("Quebec", "Ontario", "Brazil S", "Sliver", "Quebec", "Canada"),
+                   "gadm1:CAN.11_1", "gadm1:CAN.4_1", "gadm0:CAN"),
+    region_name = c("Quebec", "Ontario", "Brazil S", "Sliver", "Quebec",
+                    "New Brunswick", "Canada"),
     level = c("state_province", "state_province", "state_province", "state_province",
-              "state_province", "country"),
+              "state_province", "state_province", "country"),
     stringsAsFactors = FALSE)
   regions$system <- sub(":.*", "", regions$region_key)
   NSR:::nsr_index_db(list(sources = sources, taxa = taxa, checklist = checklist,
@@ -95,6 +96,52 @@ test_that("absence leaves the cultivated flag unknown in both paths", {
   expect_equal(set$code, "A")
   expect_true(is.na(row$cultivated))
   expect_true(is.na(set$cultivated))
+})
+
+# GADM keys carry their own hierarchy (BRA.25_1 sits in BRA).  Without it, a country
+# query cannot see checklist rows published against that country's states, which is how
+# VASCAN and Flora do Brasil publish - so native-up propagation and confined-country Ie
+# both fail at country level.
+test_that("a country query sees the states inside it", {
+  skip_if_not_installed("data.table")
+  db <- fixture_db()
+  places <- list(fine = list(character(0)), country = list("gadm0:CAN"))
+  row <- NSR:::nsr_resolve_status("t4", places, db)
+  set <- NSR:::nsr_resolve_status_set("t4", places, db)
+  # t4's only Canadian opinion is VASCAN's, recorded against Quebec the GADM state.
+  # Without the hierarchy the country query cannot see it at all and answers A; with it
+  # the state answers, and since Quebec is t4's only native region it is endemic there.
+  expect_equal(row$code, "Ne")
+  expect_equal(set$code, "Ne")
+  expect_equal(row$scope, "sub-polygons agree")
+  expect_equal(set$scope, "sub-polygons agree")
+  expect_equal(set$sources, row$sources)
+})
+
+test_that("the hierarchy is exact, so min_overlap cannot filter it out", {
+  db <- fixture_db()
+  kids <- NSR:::nsr_gadm_children("gadm0:CAN", db)
+  expect_setequal(kids, c("gadm1:CAN.11_1", "gadm1:CAN.4_1"))
+  expect_equal(NSR:::nsr_gadm_parents("gadm1:CAN.4_1", db), "gadm0:CAN")
+  # a state is a tiny share of its country, so as an overlap fraction it would be
+  # dropped; the parent/child edges carry no fraction and are not filtered
+  expect_setequal(NSR:::nsr_gadm_children("gadm0:CAN", db), kids)
+  # regions with no checklist rows are not children of anything
+  expect_equal(NSR:::nsr_gadm_children("gadm0:BRA", db), character(0))
+})
+
+test_that("a range confined to one country's states is confined to that country", {
+  skip_if_not_installed("data.table")
+  db <- fixture_db()
+  # t5 is native in Quebec and New Brunswick and nowhere else; asked about a Brazilian
+  # region that is comprehensively listed, it is absent there and endemic to Canada
+  places <- list(fine = list("wgsrpd3:BZL"), country = list(character(0)))
+  row <- NSR:::nsr_resolve_status("t5", places, db)
+  set <- NSR:::nsr_resolve_status_set("t5", places, db)
+  expect_equal(row$code, "Ie")
+  expect_equal(set$code, "Ie")
+  expect_match(row$reason, "Canada")
+  expect_match(set$reason, "Canada")
 })
 
 test_that("min_overlap keeps slivers out of the consulted set", {

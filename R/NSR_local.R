@@ -180,7 +180,26 @@ nsr_index_db <- function(db) {
                       paste(db$checklist$taxon_id, db$checklist$region_key))
   db$chk_env <- list2env(db$chk_idx, envir = new.env(hash = TRUE, parent = emptyenv()))
   db$link_env <- list2env(db$link_idx, envir = new.env(hash = TRUE, parent = emptyenv()))
+  # GADM's key carries its own hierarchy: gid_1 "BRA.25_1" sits in gid_0 "BRA".  That
+  # containment is exact by construction, which is why it is kept OUT of the link table:
+  # link rows carry overlap fractions and are filtered by min_overlap, and a state is a
+  # legitimately tiny share of its country (Distrito Federal is 0.07% of Brazil), so as
+  # a fraction it would be discarded as a sliver.  Only regions that actually carry
+  # checklist rows are listed, since those are the only ones an answer can draw on.
+  g1 <- unique(db$regions$region_key[db$regions$system == "gadm1"])
+  g1 <- g1[g1 %in% db$checklist$region_key]
+  parent <- if (length(g1)) paste0("gadm0:", sub("\\..*$", "", sub("^gadm1:", "", g1))) else character(0)
+  db$gadm_parent <- stats::setNames(parent, g1)
+  db$gadm_children <- if (length(g1)) split(g1, parent) else list()
   if (requireNamespace("data.table", quietly = TRUE)) {
+    db$gadm_edges_dt <- if (length(g1)) {
+      data.table::data.table(from_region = c(g1, parent), to_region = c(parent, g1),
+                             relation = rep(c("within", "contains"), each = length(g1)))
+    } else {
+      data.table::data.table(from_region = character(0), to_region = character(0),
+                             relation = character(0))
+    }
+    data.table::setkeyv(db$gadm_edges_dt, "from_region")
     db$chk_dt <- data.table::as.data.table(db$checklist)
     data.table::setkeyv(db$chk_dt, c("taxon_id", "region_key"))
     db$links_dt <- data.table::as.data.table(db$links)
@@ -332,6 +351,29 @@ nsr_resolve_status <- function(taxon_id, places, db, min_overlap = 0.01) {
   out
 }
 
+#' The GADM units directly below, or directly above, the regions given
+#'
+#' Internal.  Exact containment read off the key, so no overlap fraction applies and
+#' \code{min_overlap} does not filter it.  See \code{nsr_index_db()}.
+#' @keywords internal
+#' @noRd
+nsr_gadm_children <- function(keys, db) {
+  if (!length(keys) || !length(db$gadm_children)) return(character(0))
+  k <- keys[startsWith(keys, "gadm0:")]
+  if (!length(k)) return(character(0))
+  setdiff(as.character(unlist(db$gadm_children[k], use.names = FALSE)), keys)
+}
+
+#' @keywords internal
+#' @noRd
+nsr_gadm_parents <- function(keys, db) {
+  if (!length(keys) || !length(db$gadm_parent)) return(character(0))
+  k <- keys[startsWith(keys, "gadm1:")]
+  if (!length(k)) return(character(0))
+  p <- as.character(unname(db$gadm_parent[k]))
+  setdiff(p[!is.na(p)], keys)
+}
+
 #' Opinions about one taxon bearing on a set of regions
 #'
 #' Internal.  Direct opinions, plus opinions about regions the query's regions are inside
@@ -358,6 +400,19 @@ nsr_opinions_for <- function(taxon_id, keys, db, min_overlap = 0.01) {
       }
     }
   }
+  # The states inside a queried country: a source keyed on GADM states (VASCAN, Flora do
+  # Brasil) is otherwise invisible to a country query, which breaks native-up propagation.
+  # A state query does not come back here for its country - that is the ancestor path in
+  # nsr_resolve_status(), which takes direct rows only, so a country's OTHER states never
+  # reach it.
+  kids <- nsr_gadm_children(keys, db)
+  if (length(kids)) {
+    idx <- mget(paste(taxon_id, kids), db$chk_env, ifnotfound = list(NULL))
+    if (sum(lengths(idx))) {
+      rows <- c(rows, unlist(idx, use.names = FALSE))
+      rel <- c(rel, rep("contains", sum(lengths(idx))))
+    }
+  }
   if (!length(rows)) return(NULL)
   list(status = db$chk_status[rows], source_name = db$chk_source[rows],
        is_cultivated = db$chk_cult[rows], relation = rel)
@@ -378,6 +433,7 @@ nsr_is_endemic <- function(taxon_id, keys, db, min_overlap = 0.01) {
   li <- unlist(mget(keys, db$link_env, ifnotfound = list(NULL)), use.names = FALSE)
   inside <- if (!length(li)) keys else
     c(keys, db$link_to[li][db$link_rel[li] %in% c("same", "contains") & db$link_frac[li] >= min_overlap])
+  inside <- c(inside, nsr_gadm_children(keys, db))
   all(nat %in% inside)
 }
 
@@ -404,10 +460,10 @@ nsr_endemic_elsewhere <- function(taxon_id, keys, db, min_overlap = 0.01) {
   if (length(nat) == 1) return(nm(nat))
   containers <- lapply(nat, function(r) {
     li <- db$link_env[[r]]
-    if (is.null(li)) return(character(0))
+    if (is.null(li)) return(nsr_gadm_parents(r, db))
     keep <- db$link_rel[li] %in% c("same", "within") & db$link_frac[li] >= min_overlap &
       startsWith(db$link_to[li], "gadm0:")
-    db$link_to[li][keep]
+    c(db$link_to[li][keep], nsr_gadm_parents(r, db))
   })
   common <- Reduce(intersect, containers)
   if (length(common)) nm(common[1]) else NA_character_
@@ -428,9 +484,9 @@ nsr_endemic_elsewhere <- function(taxon_id, keys, db, min_overlap = 0.01) {
 nsr_consulted_regions <- function(keys, db, min_overlap = 0.01) {
   if (!length(keys)) return(character(0))
   li <- unlist(mget(keys, db$link_env, ifnotfound = list(NULL)), use.names = FALSE)
-  if (!length(li)) return(keys)
+  if (!length(li)) return(unique(c(keys, nsr_gadm_children(keys, db))))
   keep <- db$link_rel[li] %in% c("same", "within", "contains") & db$link_frac[li] >= min_overlap
-  unique(c(keys, db$link_to[li][keep]))
+  unique(c(keys, db$link_to[li][keep], nsr_gadm_children(keys, db)))
 }
 
 #' What kind of disagreement is this?

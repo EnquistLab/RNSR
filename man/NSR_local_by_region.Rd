@@ -26,8 +26,11 @@ one polygon each.}
 \item{min_overlap}{Ignore region links covering less than this share of a region.}
 }
 \value{
-A data.frame with \code{native_status} and the same companion columns
-  \code{NSR_local()} returns.
+A data.frame with \code{native_status} and the status columns
+  \code{NSR_local()} returns, keyed on \code{taxon_id}.  It does not echo the input
+  columns \code{NSR_local()} carries through (\code{species}, the division names,
+  \code{user_id}), since this entry point is given ids and polygon keys rather than
+  a record.
 }
 \description{
 A pipeline that has located its records itself - in the WGSRPD raster and the GADM
