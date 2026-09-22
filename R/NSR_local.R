@@ -1,0 +1,474 @@
+#' Determine native status without an internet connection
+#'
+#' Offline Native Status Resolver.  For each taxon and place, the status every built
+#' checklist gives it, reduced to one answer.  Output carries \code{\link{NSR}}'s columns,
+#' with four added.
+#'
+#' \strong{Place.}  Give coordinates (\code{latitude}, \code{longitude}), political
+#' division names (\code{country}, \code{state_province}, \code{county_parish}), or both.
+#' Coordinates are the better input: each source is consulted in the geography it
+#' publishes against (WCVP against WGSRPD level-3 areas, VASCAN and Flora do Brasil
+#' against GADM states), with no crosswalk between them.  Names are resolved to GADM
+#' units through the GNRS backbone and then carried to other geographies by the spatial
+#' link table.
+#'
+#' \strong{Precedence.}  If any source says native, the answer is native: asserting
+#' nativity is a positive claim, whereas "introduced" and "absent" are often artefacts of
+#' a list's scope, age or purpose.  Disagreement is recorded, not hidden, in
+#' \code{native_status_conflict} and \code{native_status_opinions}.
+#'
+#' \strong{Which polygons answer.}  A place is judged by the polygons it lies IN.  An
+#' opinion about a polygon containing the place applies to it (POWO's finest statement
+#' about Guadeloupe is "native in the Leeward Islands"), and among those any native
+#' opinion wins.  Polygons INSIDE the place describe only parts of it, so they are not its
+#' status: they answer only when they all agree, and otherwise the answer is \code{P} with
+#' the reason saying the status varies and how many sub-polygons say what
+#' (\code{n_subpolygons_native}, \code{n_subpolygons_introduced}).  Give coordinates and
+#' the question does not arise: the record is judged on the ground it sits on.
+#' \code{native_status_scope} records which of these produced the answer.
+#'
+#' \strong{Endemism is the exception}, deliberately: \code{Ne} and \code{Ie} are claims
+#' about the taxon's whole range rather than about one polygon, so they draw on evidence
+#' from elsewhere.  A record of a taxon confined to California, found in Michigan, is
+#' introduced there however little Michigan's own checklists say.
+#' @param occurrence_dataframe A data.frame with \code{species}, and either coordinates
+#'   or political division names (see Place).
+#' @param dir Cache directory, shared with GNRS and GVS.
+#' @param resolve_names Resolve submitted names against WCVP with
+#'   \code{TNRS::TNRS_local()}?  Names already matching WCVP accepted names need none.
+#' @param min_overlap Ignore region links covering less than this share of a region.
+#' @param quiet Suppress progress messages?
+#' @return A data.frame, one row per input row.
+#' @export
+NSR_local <- function(occurrence_dataframe, dir = nsr_cache_dir(), resolve_names = TRUE,
+                      min_overlap = 0.01, quiet = FALSE) {
+  if (!inherits(occurrence_dataframe, "data.frame")) {
+    stop("occurrence_dataframe should be a data.frame", call. = FALSE)
+  }
+  x <- occurrence_dataframe
+  col <- function(nm) if (nm %in% names(x)) as.character(x[[nm]]) else rep(NA_character_, nrow(x))
+  num <- function(nm) if (nm %in% names(x)) suppressWarnings(as.numeric(x[[nm]])) else rep(NA_real_, nrow(x))
+  species <- col("species")
+  country <- col("country")
+  state <- col("state_province")
+  county <- col("county_parish")
+  lon <- num("longitude")
+  lat <- num("latitude")
+  n <- nrow(x)
+  db <- nsr_local_db(dir)
+
+  # ---- taxa -------------------------------------------------------------------------
+  # WCVP records distributions for genera too, so a genus query is answerable directly.
+  # What must not happen is a bare genus being RESOLVED to some species of that genus,
+  # which would answer confidently about the wrong taxon.
+  above_species <- !is.na(species) & nzchar(species) &
+    lengths(strsplit(trimws(species), "[[:space:]]+")) < 2
+  taxon_id <- db$name_index$taxon_id[match(species, db$name_index$species_name)]
+  need <- unique(species[is.na(taxon_id) & !is.na(species) & nzchar(species) & !above_species])
+  if (resolve_names && length(need)) {
+    if (!quiet) message("Resolving ", format(length(need), big.mark = ","), " names ...")
+    r <- nsr_resolve_names(need, quiet = quiet, species_index = db$name_index)
+    taxon_id[is.na(taxon_id)] <- r$taxon_id[match(species[is.na(taxon_id)], r$name)]
+  }
+
+  # ---- place ------------------------------------------------------------------------
+  places <- nsr_query_regions(lon, lat, country, state, county, dir, db)
+
+  # ---- opinions ---------------------------------------------------------------------
+  use_set <- !is.null(db$chk_dt) && nrow(occurrence_dataframe) >= getOption("NSR.set_min", 200)
+  res <- if (use_set) nsr_resolve_status_set(taxon_id, places, db, min_overlap) else
+    nsr_resolve_status(taxon_id, places, db, min_overlap)
+
+  out <- data.frame(
+    family = db$taxa$family[match(taxon_id, db$taxa$taxon_id)],
+    genus = db$taxa$genus[match(taxon_id, db$taxa$taxon_id)],
+    species = species,
+    country = country, state_province = state, county_parish = county,
+    latitude = lat, longitude = lon,
+    poldiv_full = places$label,
+    poldiv_type = places$level,
+    native_status_country = res$country_code,
+    native_status_state_province = res$state_code,
+    native_status_county_parish = rep(NA_character_, n),
+    native_status = res$code,
+    native_status_reason = res$reason,
+    native_status_sources = res$sources,
+    isIntroduced = as.integer(res$code %in% c("I", "Ie")),
+    isEndemic = as.integer(res$code == "Ne"),
+    isCultivatedNSR = res$cultivated,
+    # NA, not production's 0: the flag is dropped (a taxon-level use flag with no
+    # polygon attached says nothing about the record in hand) and a never-populated
+    # column should not read as a real negative. See dev_notes/01-offline-nsr-design.md,
+    # open question 3. isCultivatedNSR above is the version that has a geography.
+    is_cultivated_taxon = NA_integer_,
+    native_status_conflict = res$conflict,
+    native_status_conflict_type = res$conflict_type,
+    native_status_scope = res$scope,
+    n_subpolygons_native = res$n_sub_native,
+    n_subpolygons_introduced = res$n_sub_introduced,
+    native_status_opinions = res$opinions,
+    regions_matched = places$matched,
+    taxon_evaluable = !is.na(taxon_id) & taxon_id %in% db$evaluable,
+    stringsAsFactors = FALSE
+  )
+  rownames(out) <- NULL
+  out
+}
+
+nsr_session <- new.env(parent = emptyenv())
+
+#' Load the local tables once per call
+#' @keywords internal
+#' @noRd
+nsr_local_db <- function(dir) {
+  stamp <- paste(normalizePath(dir), file.mtime(nsr_table_path("checklist", dir)),
+                 file.mtime(nsr_table_path("region-links", dir)))
+  hit <- nsr_session$db
+  if (!is.null(hit) && identical(hit$stamp, stamp)) return(hit$value)
+  need <- c("sources", "taxa", "regions", "checklist")
+  miss <- vapply(need, function(t) !file.exists(nsr_table_path(t, dir)), logical(1))
+  if (any(miss)) {
+    stop("The local NSR is not built in ", dir, ".\nRun NSR_local_build().", call. = FALSE)
+  }
+  db <- lapply(need, function(t) as.data.frame(nanoparquet::read_parquet(nsr_table_path(t, dir))))
+  names(db) <- need
+  lf <- nsr_table_path("region-links", dir)
+  db$links <- if (file.exists(lf)) as.data.frame(nanoparquet::read_parquet(lf)) else
+    data.frame(from_region = character(0), to_region = character(0), relation = character(0),
+               fraction = numeric(0), stringsAsFactors = FALSE)
+  db$link_idx <- split(seq_len(nrow(db$links)), db$links$from_region)
+  db$chk_idx <- split(seq_len(nrow(db$checklist)),
+                      paste(db$checklist$taxon_id, db$checklist$region_key))
+  db$chk_env <- list2env(db$chk_idx, envir = new.env(hash = TRUE, parent = emptyenv()))
+  db$link_env <- list2env(db$link_idx, envir = new.env(hash = TRUE, parent = emptyenv()))
+  if (requireNamespace("data.table", quietly = TRUE)) {
+    db$chk_dt <- data.table::as.data.table(db$checklist)
+    data.table::setkeyv(db$chk_dt, c("taxon_id", "region_key"))
+    db$links_dt <- data.table::as.data.table(db$links)
+    data.table::setkeyv(db$links_dt, "from_region")
+    nat <- unique(db$chk_dt[status == "native", list(taxon_id, region_key)])
+    db$native_dt <- nat
+    data.table::setkeyv(db$native_dt, "taxon_id")
+    db$confined_dt <- nsr_confined_ranges(nat, db)
+  }
+  # WCVP sometimes carries the same name at two ranks (a variety row also called
+  # "Pinus ponderosa"), and only one of them holds the distributions: index names to the
+  # species-rank id, and among those to the one with opinions
+  tx <- db$taxa
+  tx$is_species <- tolower(tx$rank) %in% c("species", "")
+  tx$has_rows <- tx$taxon_id %in% db$checklist$taxon_id
+  tx <- tx[order(!tx$has_rows, !tx$is_species), , drop = FALSE]
+  db$name_index <- tx[!duplicated(tx$species_name), c("species_name", "taxon_id")]
+  db$chk_status <- db$checklist$status
+  db$chk_source <- db$checklist$source_name
+  db$chk_cult <- db$checklist$is_cultivated
+  db$chk_region <- db$checklist$region_key
+  db$link_to <- db$links$to_region
+  db$link_rel <- db$links$relation
+  db$link_frac <- db$links$fraction
+  db$chk_idx_taxon <- split(seq_len(nrow(db$checklist)), db$checklist$taxon_id)
+  db$evaluable <- unique(db$checklist$taxon_id)
+  db$comprehensive <- db$sources$source_name[db$sources$is_comprehensive %in% TRUE]
+  db$covered <- unique(db$checklist$region_key[db$checklist$source_name %in% db$comprehensive])
+  nsr_session$db <- list(stamp = stamp, value = db)
+  db
+}
+
+#' The regions a query refers to, in every system
+#'
+#' Internal.  With coordinates, each system is looked up directly.  With names, the GADM
+#' unit comes from the GNRS backbone and other systems are reached through the link
+#' table.  Returns, per row, the regions to consult and how each relates to the query.
+#' @keywords internal
+#' @noRd
+nsr_query_regions <- function(lon, lat, country, state, county, dir, db) {
+  n <- length(lon)
+  direct <- vector("list", n)
+  fine <- vector("list", n)
+  ctry <- vector("list", n)
+  label <- rep(NA_character_, n)
+  level <- rep("country", n)
+  matched <- rep("none", n)
+
+  loc <- if (any(is.finite(lon) & is.finite(lat))) nsr_locate_regions(lon, lat, dir) else NULL
+  bb <- try(nsr_gnrs_backbone(dir), silent = TRUE)
+  pd <- if (!inherits(bb, "try-error")) nsr_match_poldiv(country, state, bb) else NULL
+  pd0 <- if (!inherits(bb, "try-error")) nsr_match_poldiv(country, NULL, bb) else NULL
+
+  for (i in seq_len(n)) {
+    keys <- character(0)
+    if (!is.null(loc)) keys <- c(keys, stats::na.omit(c(loc$wgsrpd3[i], loc$gadm[i], loc$gadm0[i])))
+    if (!is.null(pd)) {
+      gid1 <- if (!is.na(pd$state_province_id[i]))
+        bb$state$gid_1[match(pd$state_province_id[i], bb$state$state_province_id)] else NA_character_
+      gid0 <- if (!is.na(pd0$country_id[i]))
+        bb$country$gid_0[match(pd0$country_id[i], bb$country$country_id)] else NA_character_
+      if (!is.na(gid1)) keys <- c(keys, paste0("gadm1:", gid1))
+      if (!is.na(gid0)) keys <- c(keys, paste0("gadm0:", gid0))
+    }
+    keys <- unique(keys[!is.na(keys)])
+    # the finest place the query actually names, kept apart from its country: a question
+    # about Amazonas must not inherit Brazil's answer
+    fine[[i]] <- grep("^gadm0:", keys, value = TRUE, invert = TRUE)
+    ctry[[i]] <- grep("^gadm0:", keys, value = TRUE)
+    direct[[i]] <- keys
+    has_state <- any(grepl("^gadm1:", keys)) || (!is.null(pd) && !is.na(pd$state_province_id[i]))
+    level[i] <- if (has_state) "state_province" else "country"
+    matched[i] <- if (!length(keys)) "none" else
+      if (!is.null(loc) && !is.na(loc$gadm[i])) "coordinates" else "names"
+    label[i] <- paste(stats::na.omit(c(country[i], if (!is.na(state[i]) && nzchar(state[i])) state[i])),
+                      collapse = ":")
+    if (!nzchar(label[i]) && length(keys)) label[i] <- paste(keys, collapse = " + ")
+  }
+  list(direct = direct, fine = fine, country = ctry, label = label, level = level,
+       matched = matched)
+}
+
+#' Gather and reduce every opinion bearing on each row
+#' @keywords internal
+#' @noRd
+nsr_resolve_status <- function(taxon_id, places, db, min_overlap = 0.01) {
+  n <- length(taxon_id)
+  blank <- rep(NA_character_, n)
+  out <- list(code = blank, reason = blank, sources = blank, opinions = blank,
+              country_code = blank, state_code = blank, scope = blank,
+              conflict = rep(FALSE, n), conflict_type = rep(NA_character_, n),
+              cultivated = rep(NA_integer_, n), n_sub_native = rep(NA_integer_, n),
+              n_sub_introduced = rep(NA_integer_, n))
+  for (i in seq_len(n)) {
+    tid <- taxon_id[i]
+    fine <- places$fine[[i]]
+    ctry <- places$country[[i]]
+    keys <- if (length(fine)) fine else ctry          # answer at the finest level named
+    if (is.na(tid) || !length(c(fine, ctry))) {
+      out$code[i] <- "UNK"
+      out$reason[i] <- if (is.na(tid)) "Taxon not matched to a species in the backbone" else
+        "Place not matched to any region"
+      next
+    }
+    op <- nsr_opinions_for(tid, keys, db, min_overlap)
+    # a coarser polygon the place sits in (its country) also contains it, so opinions
+    # recorded ON that polygon apply; its OTHER sub-polygons do not, so only direct rows
+    # are taken, never its links
+    anc <- setdiff(ctry, keys)
+    if (length(anc)) {
+      rows <- unlist(mget(paste(tid, anc), db$chk_env, ifnotfound = list(NULL)), use.names = FALSE)
+      if (length(rows)) {
+        add <- list(status = db$chk_status[rows], source_name = db$chk_source[rows],
+                    is_cultivated = db$chk_cult[rows], relation = rep("within", length(rows)))
+        op <- if (is.null(op)) add else Map(c, op, add)
+      }
+    }
+    consulted <- nsr_consulted_regions(keys, db)
+    ev <- tid %in% db$evaluable
+    r <- nsr_reduce(op, consulted, ev, db)
+    if (identical(r$code, "N") && nsr_is_endemic(tid, keys, db, min_overlap)) {
+      r$code <- "Ne"
+      r$reason <- paste0(sub("^Native", "Native and endemic", r$reason))
+    }
+    if (identical(r$code, "A")) {
+      ee <- nsr_endemic_elsewhere(tid, keys, db, min_overlap)
+      if (!is.na(ee)) {
+        r$code <- "Ie"
+        r$reason <- paste0("Absent from this region and endemic to ", ee,
+                           ", so introduced here (inferred)")
+      }
+    }
+    for (f in names(r)) out[[f]][i] <- r[[f]]
+    # per-level codes, for the service's columns
+    out$country_code[i] <- if (length(ctry)) {
+      nsr_reduce(nsr_opinions_for(tid, ctry, db, min_overlap), nsr_consulted_regions(ctry, db), ev, db)$code
+    } else NA_character_
+    out$state_code[i] <- if (length(fine)) {
+      nsr_reduce(nsr_opinions_for(tid, fine, db, min_overlap), nsr_consulted_regions(fine, db), ev, db)$code
+    } else NA_character_
+  }
+  out
+}
+
+#' Opinions about one taxon bearing on a set of regions
+#'
+#' Internal.  Direct opinions, plus opinions about regions the query's regions are inside
+#' of or contain, with the relation recorded so the reducer can apply the one-way
+#' inheritance rules.
+#' @keywords internal
+#' @noRd
+nsr_opinions_for <- function(taxon_id, keys, db, min_overlap = 0.01) {
+  if (!length(keys)) return(NULL)
+  rows <- unlist(mget(paste(taxon_id, keys), db$chk_env, ifnotfound = list(NULL)), use.names = FALSE)
+  rel <- if (length(rows)) rep("same", length(rows)) else character(0)
+  li <- unlist(mget(keys, db$link_env, ifnotfound = list(NULL)), use.names = FALSE)
+  if (length(li)) {
+    to <- db$link_to[li]; rl <- db$link_rel[li]; fr <- db$link_frac[li]
+    known <- unique(sub(":.*", "", keys))        # geographies this place is located in
+    good <- !(to %in% keys) & fr >= min_overlap & !(sub(":.*", "", to) %in% known)
+    if (any(good)) {
+      to <- to[good]; rl <- rl[good]
+      idx <- mget(paste(taxon_id, to), db$chk_env, ifnotfound = list(NULL))
+      n <- lengths(idx)
+      if (sum(n)) {
+        rows <- c(rows, unlist(idx, use.names = FALSE))
+        rel <- c(rel, rep(rl, n))
+      }
+    }
+  }
+  if (!length(rows)) return(NULL)
+  list(status = db$chk_status[rows], source_name = db$chk_source[rows],
+       is_cultivated = db$chk_cult[rows], relation = rel)
+}
+
+#' Is the taxon native only inside the queried place?
+#'
+#' Internal.  Endemism (\code{Ne}) is read off the checklist: every region any source
+#' calls it native must be the queried region, inside it, or overlapping it - never a
+#' region lying outside.  Only claimed when at least one source has a native opinion.
+#' @keywords internal
+#' @noRd
+nsr_is_endemic <- function(taxon_id, keys, db, min_overlap = 0.01) {
+  rows <- db$chk_idx_taxon[[as.character(taxon_id)]]
+  if (is.null(rows)) return(FALSE)
+  nat <- db$chk_region[rows][db$chk_status[rows] == "native"]
+  if (!length(nat)) return(FALSE)
+  li <- unlist(mget(keys, db$link_env, ifnotfound = list(NULL)), use.names = FALSE)
+  inside <- if (!length(li)) keys else
+    c(keys, db$link_to[li][db$link_rel[li] %in% c("same", "contains") & db$link_frac[li] >= min_overlap])
+  all(nat %in% inside)
+}
+
+#' Is the taxon endemic to somewhere else?
+#'
+#' Internal.  The service's `Ie`: a taxon absent from the queried region but whose whole
+#' native range lies elsewhere and is confined - endemic to one region, or to one country -
+#' cannot be native here, so an occurrence must be introduced.  A widely native species
+#' merely unrecorded here stays `A`: absence is not evidence of introduction unless the
+#' species could not have been native in the first place.
+#' @return The name of the region it is endemic to, or NA.
+#' @keywords internal
+#' @noRd
+nsr_endemic_elsewhere <- function(taxon_id, keys, db, min_overlap = 0.01) {
+  rows <- db$chk_idx_taxon[[as.character(taxon_id)]]
+  if (is.null(rows)) return(NA_character_)
+  nat <- unique(db$chk_region[rows][db$chk_status[rows] == "native"])
+  if (!length(nat)) return(NA_character_)
+  if (any(nat %in% nsr_consulted_regions(keys, db))) return(NA_character_)
+  nm <- function(k) {
+    i <- match(k, db$regions$region_key)
+    if (is.na(i)) k else db$regions$region_name[i]
+  }
+  if (length(nat) == 1) return(nm(nat))
+  containers <- lapply(nat, function(r) {
+    li <- db$link_env[[r]]
+    if (is.null(li)) return(character(0))
+    keep <- db$link_rel[li] %in% c("same", "within") & db$link_frac[li] >= min_overlap &
+      startsWith(db$link_to[li], "gadm0:")
+    db$link_to[li][keep]
+  })
+  common <- Reduce(intersect, containers)
+  if (length(common)) nm(common[1]) else NA_character_
+}
+
+#' Every region an answer may draw on: the query's own, and those linked to them
+#'
+#' Internal.  Used to decide whether absence is interpretable: a query about California
+#' finds no source publishing against GADM California, but WGSRPD's CAL is the same place
+#' and is comprehensively listed, so absence there does mean something.
+#' @keywords internal
+#' @noRd
+nsr_consulted_regions <- function(keys, db) {
+  if (!length(keys)) return(character(0))
+  li <- unlist(mget(keys, db$link_env, ifnotfound = list(NULL)), use.names = FALSE)
+  if (!length(li)) return(keys)
+  unique(c(keys, db$link_to[li][db$link_rel[li] %in% c("same", "within", "contains")]))
+}
+
+#' What kind of disagreement is this?
+#'
+#' Internal.  Two quite different things look like conflict.  Sources can genuinely
+#' disagree about a polygon (VASCAN calls a plant introduced in Ontario where POWO calls it
+#' native).  Or one source can hold both statuses for the same polygon because WCVP records
+#' one subspecies as native and another as introduced, and we roll infraspecific taxa up to
+#' the species - no one disagrees with anyone there.  The flag says which.
+#' @return "none", "sources", "within source" or "both".
+#' @keywords internal
+#' @noRd
+nsr_conflict_type <- function(status, source) {
+  if (!length(status)) return("none")
+  by_src <- split(status, source)
+  within <- any(vapply(by_src, function(z) length(unique(z)) > 1, logical(1)))
+  sets <- vapply(by_src, function(z) paste(sort(unique(z)), collapse = "+"), character(1))
+  between <- length(unique(sets)) > 1
+  if (within && between) "both" else if (between) "sources" else if (within) "within source" else "none"
+}
+
+#' Reduce opinions to one status code
+#'
+#' Internal.  A place is judged by the polygons it lies IN: an opinion about a polygon
+#' containing it applies to it, and among those, any native opinion wins (BM's
+#' precedence).  Polygons INSIDE the place describe only parts of it, so they are not
+#' its status: they answer only when they all agree, and otherwise the answer is that it
+#' depends where the record falls - report `P` and say so.  Polygons merely overlapping
+#' describe neither.  This keeps a record's verdict tied to the evidence for the ground
+#' it actually sits on, which is what coordinates give directly.
+#'
+#' Internal.  Inheritance: an opinion about a region the query sits INSIDE ("within"
+#' from the query's side) carries introduced downward but not native; an opinion about a
+#' region inside the query ("contains") carries native upward but not introduced;
+#' partial overlap carries neither.  Then: any native wins, else introduced, else
+#' present; else absent where a comprehensive source covers the region and the taxon is
+#' evaluable, else unknown.
+#' @keywords internal
+#' @noRd
+nsr_reduce <- function(op, keys, evaluable, db) {
+  if (is.null(op)) {
+    st <- src <- rel <- character(0); cult <- integer(0)
+  } else {
+    st <- op$status; src <- op$source_name; rel <- op$relation; cult <- op$is_cultivated
+  }
+  opinions <- if (!length(st)) NA_character_ else
+    paste(paste0(src, ":", st, ifelse(rel == "same", "", paste0("(", rel, ")"))), collapse = "; ")
+  cultivated <- if (!length(cult)) NA_integer_ else as.integer(any(cult %in% c(1, "1", TRUE)))
+  inc <- rel %in% c("same", "within")        # polygons the place lies in
+  sub <- rel == "contains"                   # polygons inside the place
+  ovl <- rel == "overlaps"
+  n_sub_n <- sum(sub & st == "native"); n_sub_i <- sum(sub & st == "introduced")
+  out <- function(code, reason, scope, srcs = character(0), conflict = FALSE,
+                  conflict_type = "none") {
+    list(code = code, reason = reason, scope = scope,
+         sources = if (!length(srcs)) NA_character_ else paste(sort(unique(srcs)), collapse = ", "),
+         opinions = opinions, conflict = conflict, conflict_type = conflict_type,
+         cultivated = cultivated, n_sub_native = n_sub_n, n_sub_introduced = n_sub_i)
+  }
+  if (any(inc)) {
+    si <- st[inc]
+    ct <- nsr_conflict_type(si, src[inc])
+    code <- if ("native" %in% si) "N" else if ("introduced" %in% si) "I" else "P"
+    want <- c(N = "native", I = "introduced", P = "present")[[code]]
+    stated <- any(rel == "same" & st == want)
+    word <- c(N = "Native", I = "Introduced", P = "Present")[[code]]
+    reason <- if (ct != "none" && code == "N") {
+      paste0("Native to this polygon as per checklist (", ct, " disagree; any native opinion is taken)")
+    } else if (stated) paste0(word, " in this polygon, as per checklist")
+    else paste0(word, " in a polygon containing this place, as per checklist")
+    return(out(code, reason, if (stated) "polygon" else "containing polygon", src[inc],
+               ct != "none", ct))
+  }
+  if (any(sub)) {
+    ss <- unique(st[sub])
+    if (length(ss) == 1) {
+      code <- c(native = "N", introduced = "I", present = "P")[[ss]]
+      word <- c(native = "Native", introduced = "Introduced", present = "Present")[[ss]]
+      return(out(code, paste0(word, " in every listed polygon within this place, as per checklist"),
+                 "sub-polygons agree", src[sub]))
+    }
+    return(out("P", paste0("Status varies among the polygons within this place (", n_sub_n,
+                           " native, ", n_sub_i, " introduced); give coordinates or a finer division"),
+               "sub-polygons differ", src[sub]))
+  }
+  if (any(ovl)) {
+    return(out("UNK", "Only polygons partly overlapping this place have a status; none covers it",
+               "overlapping only", src[ovl]))
+  }
+  if (!evaluable) return(out("UNK", "No source holds native status information for this taxon", "none"))
+  if (any(keys %in% db$covered)) return(out("A", "Absent from the comprehensive checklists for this polygon", "polygon"))
+  out("UNK", "No comprehensive checklist covers this polygon", "none")
+}

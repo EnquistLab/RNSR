@@ -17,6 +17,7 @@ Imports:
         httr
 Suggests:
         knitr,
+        data.table,
         rmarkdown,
         testthat,
         devtools,
