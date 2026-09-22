@@ -8,6 +8,7 @@ NSR_local(
   occurrence_dataframe,
   dir = nsr_cache_dir(),
   resolve_names = TRUE,
+  use_coordinates = FALSE,
   min_overlap = 0.01,
   exclude_extinct = TRUE,
   quiet = FALSE
@@ -21,6 +22,10 @@ or political division names (see Place).}
 
 \item{resolve_names}{Resolve submitted names against WCVP with
 \code{TNRS::TNRS_local()}?  Names already matching WCVP accepted names need none.}
+
+\item{use_coordinates}{Place each record by its \code{latitude} and \code{longitude}
+as well as by its division names?  Default \code{FALSE}: coordinates cost a raster
+lookup per call, and resolving them to political divisions is GVS's job.  See Place.}
 
 \item{min_overlap}{Ignore region links covering less than this share of a region.}
 
@@ -41,13 +46,26 @@ checklist gives it, reduced to one answer.  Output carries \code{\link{NSR}}'s c
 with four added.
 }
 \details{
-\strong{Place.}  Give coordinates (\code{latitude}, \code{longitude}), political
-division names (\code{country}, \code{state_province}, \code{county_parish}), or both.
-Coordinates are the better input: each source is consulted in the geography it
-publishes against (WCVP against WGSRPD level-3 areas, VASCAN and Flora do Brasil
-against GADM states), with no crosswalk between them.  Names are resolved to GADM
-units through the GNRS backbone and then carried to other geographies by the spatial
-link table.
+\strong{Place.}  By default the answer comes from political division names
+(\code{country}, \code{state_province}, \code{county_parish}), which are resolved to
+GADM units through the GNRS backbone and carried to each source's own geography by the
+spatial link table.  Any \code{latitude} and \code{longitude} present are echoed but
+not used: placing every record by point costs a raster lookup per call, and turning
+coordinates into political divisions is what GVS already does.  Resolve them there and
+pass the divisions here, or set \code{use_coordinates = TRUE} to have this function do
+it.
+
+With \code{use_coordinates = TRUE}, a record is placed by its point in each source's
+own geography (WCVP against WGSRPD level-3 areas, VASCAN and Flora do Brasil against
+GADM states), with no crosswalk between them - the finer question, where the data
+supports it.  Given coordinates and names together, the two are independent claims
+about where the record is and either can be wrong: a transposed longitude and a
+mistyped province are equally easy mistakes, so neither is authoritative.  Where they
+agree, both are used.  Where they disagree, \code{place_conflict} is \code{TRUE},
+\code{native_status} is \code{UNK}, and the two bases are answered separately in
+\code{native_status_coordinates} and \code{native_status_names} for you to judge.  The
+service has no combined mode to follow here: \code{\link{NSR}} takes names and
+\code{\link{NSR_from_coordinates}} takes coordinates.
 
 \strong{Precedence.}  If any source says native, the answer is native: asserting
 nativity is a positive claim, whereas "introduced" and "absent" are often artefacts of

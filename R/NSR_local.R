@@ -4,13 +4,26 @@
 #' checklist gives it, reduced to one answer.  Output carries \code{\link{NSR}}'s columns,
 #' with four added.
 #'
-#' \strong{Place.}  Give coordinates (\code{latitude}, \code{longitude}), political
-#' division names (\code{country}, \code{state_province}, \code{county_parish}), or both.
-#' Coordinates are the better input: each source is consulted in the geography it
-#' publishes against (WCVP against WGSRPD level-3 areas, VASCAN and Flora do Brasil
-#' against GADM states), with no crosswalk between them.  Names are resolved to GADM
-#' units through the GNRS backbone and then carried to other geographies by the spatial
-#' link table.
+#' \strong{Place.}  By default the answer comes from political division names
+#' (\code{country}, \code{state_province}, \code{county_parish}), which are resolved to
+#' GADM units through the GNRS backbone and carried to each source's own geography by the
+#' spatial link table.  Any \code{latitude} and \code{longitude} present are echoed but
+#' not used: placing every record by point costs a raster lookup per call, and turning
+#' coordinates into political divisions is what GVS already does.  Resolve them there and
+#' pass the divisions here, or set \code{use_coordinates = TRUE} to have this function do
+#' it.
+#'
+#' With \code{use_coordinates = TRUE}, a record is placed by its point in each source's
+#' own geography (WCVP against WGSRPD level-3 areas, VASCAN and Flora do Brasil against
+#' GADM states), with no crosswalk between them - the finer question, where the data
+#' supports it.  Given coordinates and names together, the two are independent claims
+#' about where the record is and either can be wrong: a transposed longitude and a
+#' mistyped province are equally easy mistakes, so neither is authoritative.  Where they
+#' agree, both are used.  Where they disagree, \code{place_conflict} is \code{TRUE},
+#' \code{native_status} is \code{UNK}, and the two bases are answered separately in
+#' \code{native_status_coordinates} and \code{native_status_names} for you to judge.  The
+#' service has no combined mode to follow here: \code{\link{NSR}} takes names and
+#' \code{\link{NSR_from_coordinates}} takes coordinates.
 #'
 #' \strong{Precedence.}  If any source says native, the answer is native: asserting
 #' nativity is a positive claim, whereas "introduced" and "absent" are often artefacts of
@@ -36,6 +49,9 @@
 #' @param dir Cache directory, shared with GNRS and GVS.
 #' @param resolve_names Resolve submitted names against WCVP with
 #'   \code{TNRS::TNRS_local()}?  Names already matching WCVP accepted names need none.
+#' @param use_coordinates Place each record by its \code{latitude} and \code{longitude}
+#'   as well as by its division names?  Default \code{FALSE}: coordinates cost a raster
+#'   lookup per call, and resolving them to political divisions is GVS's job.  See Place.
 #' @param min_overlap Ignore region links covering less than this share of a region.
 #' @param exclude_extinct Ignore distribution records the source marks extinct?  Default
 #'   \code{TRUE}, which answers about the present day.  Set \code{FALSE} to model a past
@@ -63,7 +79,8 @@
 #' warning says so.  Coordinates are the way to ask a finer question.
 #' @export
 NSR_local <- function(occurrence_dataframe, dir = nsr_cache_dir(), resolve_names = TRUE,
-                      min_overlap = 0.01, exclude_extinct = TRUE, quiet = FALSE) {
+                      use_coordinates = FALSE, min_overlap = 0.01, exclude_extinct = TRUE,
+                      quiet = FALSE) {
   if (!inherits(occurrence_dataframe, "data.frame")) {
     stop("occurrence_dataframe should be a data.frame", call. = FALSE)
   }
@@ -111,12 +128,47 @@ NSR_local <- function(occurrence_dataframe, dir = nsr_cache_dir(), resolve_names
   }
 
   # ---- place ------------------------------------------------------------------------
-  places <- nsr_query_regions(lon, lat, country, state, county, dir, db)
+  if (!use_coordinates && any(is.finite(lon) & is.finite(lat)) && !quiet) {
+    message("Coordinates present but not used: answering from division names. ",
+            "Set use_coordinates = TRUE to place each record by its point instead.")
+  }
+  places <- nsr_query_regions(lon, lat, country, state, county, dir, db, use_coordinates)
 
   # ---- opinions ---------------------------------------------------------------------
   use_set <- !is.null(db$chk_dt) && nrow(occurrence_dataframe) >= getOption("NSR.set_min", 200)
-  res <- if (use_set) nsr_resolve_status_set(taxon_id, places, db, min_overlap, exclude_extinct)
-         else nsr_resolve_status(taxon_id, places, db, min_overlap, exclude_extinct)
+  resolve <- function(tid, pl) if (use_set)
+    nsr_resolve_status_set(tid, pl, db, min_overlap, exclude_extinct) else
+    nsr_resolve_status(tid, pl, db, min_overlap, exclude_extinct)
+  res <- resolve(taxon_id, places)
+
+  # ---- records whose two statements of place disagree ---------------------------------
+  # Neither basis is taken as authoritative, so the pooled answer - which drew on
+  # evidence for both places and describes neither - is withdrawn, and each basis is
+  # answered on its own.  The two columns are populated only for these rows; elsewhere
+  # they are NA because there is nothing to compare, and native_status is the answer.
+  status_xy <- rep(NA_character_, n)
+  status_nm <- rep(NA_character_, n)
+  cf <- places$conflict
+  if (any(cf)) {
+    status_xy[cf] <- resolve(taxon_id[cf], nsr_split_keys(places$xy[cf]))$code
+    status_nm[cf] <- resolve(taxon_id[cf], nsr_split_keys(places$nm[cf]))$code
+    res$code[cf] <- "UNK"
+    res$reason[cf] <- paste0(
+      "Coordinates and division names resolve to different places, so no single answer ",
+      "is given; see native_status_coordinates and native_status_names")
+    res$scope[cf] <- "none"
+    res$sources[cf] <- NA_character_
+    res$opinions[cf] <- NA_character_
+    res$country_code[cf] <- NA_character_
+    res$state_code[cf] <- NA_character_
+    res$cultivated[cf] <- NA_integer_
+    res$conflict[cf] <- FALSE
+    res$conflict_type[cf] <- "none"
+    res$n_sub_native[cf] <- 0L
+    res$n_sub_introduced[cf] <- 0L
+    if (!quiet) message(sum(cf), " record(s) whose coordinates and division names ",
+                        "disagree; see place_conflict.")
+  }
 
   out <- data.frame(
     family = db$taxa$family[match(taxon_id, db$taxa$taxon_id)],
@@ -146,6 +198,9 @@ NSR_local <- function(occurrence_dataframe, dir = nsr_cache_dir(), resolve_names
     n_subpolygons_native = res$n_sub_native,
     n_subpolygons_introduced = res$n_sub_introduced,
     native_status_opinions = res$opinions,
+    native_status_coordinates = status_xy,
+    native_status_names = status_nm,
+    place_conflict = places$conflict,
     regions_matched = places$matched,
     taxon_evaluable = !is.na(taxon_id) & taxon_id %in% db$evaluable,
     user_id = user_id,
@@ -258,47 +313,85 @@ nsr_index_db <- function(db) {
 #' table.  Returns, per row, the regions to consult and how each relates to the query.
 #' @keywords internal
 #' @noRd
-nsr_query_regions <- function(lon, lat, country, state, county, dir, db) {
+nsr_query_regions <- function(lon, lat, country, state, county, dir, db,
+                              use_coordinates = FALSE) {
   n <- length(lon)
   direct <- vector("list", n)
   fine <- vector("list", n)
   ctry <- vector("list", n)
+  xy <- vector("list", n)
+  nm <- vector("list", n)
+  conflict <- rep(FALSE, n)
   label <- rep(NA_character_, n)
   level <- rep("country", n)
   matched <- rep("none", n)
 
-  loc <- if (any(is.finite(lon) & is.finite(lat))) nsr_locate_regions(lon, lat, dir) else NULL
+  loc <- if (use_coordinates && any(is.finite(lon) & is.finite(lat)))
+    nsr_locate_regions(lon, lat, dir) else NULL
   bb <- try(nsr_gnrs_backbone(dir), silent = TRUE)
   pd <- if (!inherits(bb, "try-error")) nsr_match_poldiv(country, state, bb) else NULL
   pd0 <- if (!inherits(bb, "try-error")) nsr_match_poldiv(country, NULL, bb) else NULL
 
+  at <- function(k, p) grep(p, k, value = TRUE)
   for (i in seq_len(n)) {
-    keys <- character(0)
-    if (!is.null(loc)) keys <- c(keys, stats::na.omit(c(loc$wgsrpd3[i], loc$gadm[i], loc$gadm0[i])))
+    kx <- if (!is.null(loc))
+      as.character(stats::na.omit(c(loc$wgsrpd3[i], loc$gadm[i], loc$gadm0[i]))) else character(0)
+    kn <- character(0)
     if (!is.null(pd)) {
       gid1 <- if (!is.na(pd$state_province_id[i]))
         bb$state$gid_1[match(pd$state_province_id[i], bb$state$state_province_id)] else NA_character_
       gid0 <- if (!is.na(pd0$country_id[i]))
         bb$country$gid_0[match(pd0$country_id[i], bb$country$country_id)] else NA_character_
-      if (!is.na(gid1)) keys <- c(keys, paste0("gadm1:", gid1))
-      if (!is.na(gid0)) keys <- c(keys, paste0("gadm0:", gid0))
+      if (!is.na(gid1)) kn <- c(kn, paste0("gadm1:", gid1))
+      if (!is.na(gid0)) kn <- c(kn, paste0("gadm0:", gid0))
     }
-    keys <- unique(keys[!is.na(keys)])
+    xy[[i]] <- kx
+    nm[[i]] <- kn
+    conflict[i] <- !nsr_places_agree(kx, kn)
+    keys <- unique(c(kx, kn))
+    keys <- keys[!is.na(keys)]
     # the finest place the query actually names, kept apart from its country: a question
     # about Amazonas must not inherit Brazil's answer
+    ctry[[i]] <- at(keys, "^gadm0:")
     fine[[i]] <- grep("^gadm0:", keys, value = TRUE, invert = TRUE)
-    ctry[[i]] <- grep("^gadm0:", keys, value = TRUE)
     direct[[i]] <- keys
     has_state <- any(grepl("^gadm1:", keys)) || (!is.null(pd) && !is.na(pd$state_province_id[i]))
     level[i] <- if (has_state) "state_province" else "country"
-    matched[i] <- if (!length(keys)) "none" else
+    matched[i] <- if (!length(keys)) "none" else if (conflict[i]) "conflict" else
       if (!is.null(loc) && !is.na(loc$gadm[i])) "coordinates" else "names"
     label[i] <- paste(stats::na.omit(c(country[i], if (!is.na(state[i]) && nzchar(state[i])) state[i])),
                       collapse = ":")
     if (!nzchar(label[i]) && length(keys)) label[i] <- paste(keys, collapse = " + ")
   }
-  list(direct = direct, fine = fine, country = ctry, label = label, level = level,
-       matched = matched)
+  list(direct = direct, fine = fine, country = ctry, xy = xy, nm = nm,
+       conflict = conflict, label = label, level = level, matched = matched)
+}
+
+#' Do coordinates and division names describe the same place?
+#'
+#' Internal.  Coordinates and names are two independent claims about where a record is,
+#' and either can be wrong: a transposed longitude and a mistyped province are equally
+#' easy mistakes, so neither is authoritative.  They are compared in the geography they
+#' share, GADM, and at each level separately, so a right country with a wrong state is
+#' caught as readily as a wrong country.  A level only one of them speaks to is not a
+#' disagreement.  Where they agree, pooling the keys costs nothing and the wider set
+#' answers; where they do not, \code{\link{NSR_local}} answers each on its own.
+#' @keywords internal
+#' @noRd
+nsr_places_agree <- function(kx, kn) {
+  lvl <- function(p) {
+    a <- grep(p, kx, value = TRUE); b <- grep(p, kn, value = TRUE)
+    !length(a) || !length(b) || identical(sort(a), sort(b))
+  }
+  lvl("^gadm0:") && lvl("^gadm1:")
+}
+
+#' Split a set of region keys into the finest level named and its country
+#' @keywords internal
+#' @noRd
+nsr_split_keys <- function(keys) {
+  list(fine = lapply(keys, function(z) grep("^gadm0:", z, value = TRUE, invert = TRUE)),
+       country = lapply(keys, function(z) grep("^gadm0:", z, value = TRUE)))
 }
 
 #' Gather and reduce every opinion bearing on each row

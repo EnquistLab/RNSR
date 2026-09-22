@@ -90,6 +90,31 @@ resolution WCVP gives us) is too coarse to say anything about sub-country status
 | **vascan** | Canada, by province; native/introduced/ephemeral | DwC-A, `data.canadensys.net/ipt/archive.do?r=vascan`, ~10 MB, updated 2026-08-04 | CC0 |
 | **flbr** | Brazil, by state; native/naturalised/cultivated | DwC-A, `ipt.jbrj.gov.br/jbrj/archive.do?r=lista_especies_flora_brasil`, ~50-100 MB | CC BY 4.0 |
 
+**Division names are the default input; coordinates are opt-in (BM, 2026-09-22):**
+`NSR_local()` answers from `country`/`state_province` unless `use_coordinates = TRUE`.
+Two reasons. Placing every record by point costs a raster lookup per call, which is the
+single most expensive thing the query path can do. And resolving coordinates to political
+divisions is GVS's job: a pipeline that needs it already runs GVS, and duplicating that
+step here would mean two implementations of the same lookup drifting apart. The
+coordinate path stays available because it asks a finer question - it consults each
+source in its own geography with no crosswalk - but it is a deliberate choice rather than
+a default.
+
+**Coordinates and names are compared, not pooled (BM, 2026-09-22):** the first
+implementation unioned the region keys from both, so a record whose point and whose
+division names disagreed was answered from evidence for two places and described neither.
+Coordinates are not taken as authoritative instead: a transposed longitude and a mistyped
+province are equally easy mistakes, and the existing `NSR_from_coordinates()` example
+already renames `country` to `country_declared` precisely so declared and inferred
+divisions can be compared. The two are therefore compared in the geography they share,
+GADM, at each level separately - a right country with a wrong state is caught as readily
+as a wrong country - and a level only one of them speaks to is not a disagreement. Where
+they agree the wider key set answers, as before. Where they do not, `place_conflict` is
+`TRUE`, `native_status` is `UNK`, and `native_status_coordinates` and
+`native_status_names` carry the two answers. There is no service behaviour to follow
+here: `NSR()` takes names only and `NSR_from_coordinates()` takes coordinates only, so
+the API never meets the case.
+
 **Extinct records are kept and filtered at query time (BM, 2026-09-22):** WCVP's
 `extinct` is a bare 0/1 with no date or year - checked against the v15 distribution table,
 whose only columns are `plant_locality_id, plant_name_id, continent_code_l1, continent,

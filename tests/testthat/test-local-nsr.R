@@ -81,14 +81,21 @@ test_that("NSR_local answers the reference cases (needs a built cache)", {
     latitude = c(NA, NA, NA, NA, NA, -23.5),
     longitude = c(NA, NA, NA, NA, NA, -47.5),
     stringsAsFactors = FALSE)
-  r <- NSR_local(x, dir = cache, quiet = TRUE)
+  r <- NSR_local(x, dir = cache, quiet = TRUE, use_coordinates = TRUE)
   expect_equal(r$native_status, c("N", "N", "A", "N", "UNK", "N"))
   # Sao Paulo is answered by the Brazilian flora, which WGSRPD cannot reach
   expect_match(r$native_status_sources[2], "flbr")
-  # a moss is unknown, not absent: POWO holds no information about it
+  # a moss is unknown, not absent: WCVP holds no information about it
   expect_false(r$taxon_evaluable[5])
   # coordinates are resolved in each source's own geography
   expect_equal(r$regions_matched[6], "coordinates")
+
+  # by default coordinates are not consulted at all, so the row that has nothing else
+  # to go on has no place; the rows with division names are unaffected
+  d <- NSR_local(x, dir = cache, quiet = TRUE)
+  expect_equal(d$native_status[1:5], r$native_status[1:5])
+  expect_equal(d$regions_matched[6], "none")
+  expect_equal(d$native_status[6], "UNK")
 })
 
 test_that("region links relate the geographies sensibly (needs a built cache)", {
@@ -113,7 +120,7 @@ test_that("absence becomes introduction only for taxa confined elsewhere", {
   db <- NSR:::nsr_local_db(cache)
   nat <- db$checklist[db$checklist$status == "native", ]
   per <- table(nat$taxon_id)
-  # a species POWO gives a single native area, queried far away
+  # a species WCVP gives a single native area, queried far away
   cal <- intersect(names(per)[per == 1], nat$taxon_id[nat$region_key == "wgsrpd3:CAL"])
   skip_if(!length(cal), "no single-area Californian native in this build")
   sp <- db$taxa$species_name[match(cal[1], db$taxa$taxon_id)]

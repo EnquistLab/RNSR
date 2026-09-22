@@ -196,3 +196,30 @@ test_that("min_overlap keeps slivers out of the consulted set", {
   # lower the threshold and it comes back, so it is the threshold doing the work
   expect_true("wgsrpd3:SLIVER" %in% NSR:::nsr_consulted_regions(keys, db, min_overlap = 0))
 })
+
+# Coordinates and names are compared, not pooled, when they disagree: neither is
+# authoritative, and a pooled answer would describe neither place.
+test_that("place agreement is judged per level, in the geography the two share", {
+  xy <- c("wgsrpd3:QUE", "gadm1:CAN.11_1", "gadm0:CAN")
+  # the same place, said twice
+  expect_true(NSR:::nsr_places_agree(xy, c("gadm1:CAN.11_1", "gadm0:CAN")))
+  # right country, wrong province - the case a country-only comparison would miss
+  expect_false(NSR:::nsr_places_agree(xy, c("gadm1:CAN.4_1", "gadm0:CAN")))
+  # wrong country
+  expect_false(NSR:::nsr_places_agree(xy, c("gadm0:BRA")))
+  # a level only one basis speaks to is not a disagreement
+  expect_true(NSR:::nsr_places_agree(xy, c("gadm0:CAN")))
+  expect_true(NSR:::nsr_places_agree("wgsrpd3:QUE", c("gadm1:CAN.11_1", "gadm0:CAN")))
+  # nothing to compare
+  expect_true(NSR:::nsr_places_agree(character(0), character(0)))
+})
+
+test_that("keys split into the finest level named and its country", {
+  s <- NSR:::nsr_split_keys(list(c("wgsrpd3:QUE", "gadm1:CAN.11_1", "gadm0:CAN"),
+                                 "gadm0:BRA", character(0)))
+  expect_equal(s$fine[[1]], c("wgsrpd3:QUE", "gadm1:CAN.11_1"))
+  expect_equal(s$country[[1]], "gadm0:CAN")
+  expect_equal(s$fine[[2]], character(0))
+  expect_equal(s$country[[2]], "gadm0:BRA")
+  expect_equal(s$fine[[3]], character(0))
+})

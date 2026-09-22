@@ -14,6 +14,14 @@
   answers about the present day, FALSE models a past distribution.  Either way a region
   a taxon has been lost from stays part of its native range, so such a record is
   reported absent rather than introduced.
+* NSR_local() answers from political division names by default.  Coordinates are
+  echoed but not used unless use_coordinates = TRUE: placing every record by point
+  costs a raster lookup per call, and turning coordinates into political divisions is
+  what GVS already does.
+* Where a record gives both coordinates and division names and the two resolve to
+  different places, NSR_local() no longer pools them.  Neither is treated as
+  authoritative: place_conflict flags the record, native_status is UNK, and the two
+  bases are answered separately in native_status_coordinates and native_status_names.
 
 ## Bug fixes
 
