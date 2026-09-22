@@ -4,6 +4,11 @@
 
 ## NEW FEATURES
 * Added new function to check native status using species name and coordinates (NSR_from_coordinates)
+* Added an offline implementation: NSR_local() answers without an internet connection from a
+  local cache built by NSR_local_build(), with NSR_local_status(), NSR_local_remove() and
+  NSR_local_by_region() alongside it.  The checklist sources are acquired on the user's
+  machine; nothing derived ships with the package.  The offline path needs data.table,
+  nanoparquet, terra, sf and TNRS, all of which are Suggests.
 
 ## Bug fixes
 

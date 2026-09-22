@@ -50,10 +50,10 @@ nsr_unzip_member <- function(zip, member) {
 #' taxon id directly.
 #' @keywords internal
 #' @noRd
-nsr_import_powo <- function(zip = NULL, bb, quiet = FALSE) {
+nsr_import_wcvp <- function(zip = NULL, bb, quiet = FALSE) {
   if (is.null(zip)) zip <- nsr_find_wcvp_zip()
   if (is.null(zip) || !file.exists(zip)) {
-    stop("Could not find the WCVP archive. Supply it as files = list(powo = \"wcvp-v15.zip\"), ",
+    stop("Could not find the WCVP archive. Supply it as files = list(wcvp = \"wcvp-v15.zip\"), ",
          "or build the TNRS 'wcvp' source, whose cache holds one.", call. = FALSE)
   }
   dist_f <- nsr_unzip_member(zip, "wcvp_distribution.csv")
@@ -78,9 +78,17 @@ nsr_import_powo <- function(zip = NULL, bb, quiet = FALSE) {
   dist$taxon_id <- sp
   dist$taxon_name <- nm$taxon_name[j]
   dist$rank_published <- nm$taxon_rank[match(acc, nm$plant_name_id)]
-  dist <- dist[!is.na(dist$taxon_id) & !is.na(dist$taxon_name), , drop = FALSE]
 
   flag <- function(x) !is.na(x) & x %in% c("1", 1, TRUE, "TRUE")
+  # An extinct record is not a standing distribution.  Left in, a taxon that no longer
+  # occurs in a region comes back native there, and counts as evaluable, which also moves
+  # absence and endemism answers elsewhere.  A DOUBTFUL record is kept, but only as
+  # "present": it is too weak to support native or introduced, and dropping it would let
+  # the region read as a confident absence when the source in fact records a maybe.
+  keep <- !is.na(dist$taxon_id) & !is.na(dist$taxon_name) & !flag(dist$extinct)
+  dist <- dist[keep, , drop = FALSE]
+  j <- j[keep]                      # j indexes nm per dist row, so it is subset with it
+
   out <- data.frame(
     taxon_name = dist$taxon_name, taxon_id = dist$taxon_id,
     species_name = dist$taxon_name, family = nm$family[j], genus = nm$genus[j],

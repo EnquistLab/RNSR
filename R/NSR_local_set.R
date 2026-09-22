@@ -86,10 +86,42 @@ NSR_local_by_region <- function(taxon_id, region_keys, country_keys = NULL,
 #' Resolve every query at once, with joins
 #'
 #' Internal.  Needs \code{data.table}; \code{\link{NSR_local}} falls back to the row path
-#' without it.  Returns the same list of per-row vectors as \code{nsr_resolve_status()}.
+#' without it.  Returns the same list of per-row vectors as \code{nsr_resolve_status()},
+#' \emph{including} the per-level codes: the reduction is run once for the answer and once
+#' more against each political level on its own, which is what the row path does per row.
+#' Endemism is deliberately not applied to the per-level codes - \code{Ne} and \code{Ie}
+#' are claims about the taxon's whole range rather than about one level - so that the two
+#' implementations agree column for column.
 #' @keywords internal
 #' @noRd
 nsr_resolve_status_set <- function(taxon_id, places, db, min_overlap = 0.01) {
+  n <- length(taxon_id)
+  out <- nsr_resolve_status_set1(taxon_id, places, db, min_overlap, endemism = TRUE)
+  empty <- rep(list(character(0)), n)
+  # a level reports a code only when it was asked about AND there is a taxon to ask
+  # about: with no match in the backbone no lookup happened at any level, which is what
+  # the row path records
+  asked <- !is.na(taxon_id)
+  nc <- lengths(places$country)
+  nf <- lengths(places$fine)
+  if (any(nc > 0)) {
+    lv <- nsr_resolve_status_set1(taxon_id, list(fine = empty, country = places$country),
+                                  db, min_overlap, endemism = FALSE)
+    out$country_code <- ifelse(asked & nc > 0, lv$code, NA_character_)
+  }
+  if (any(nf > 0)) {
+    lv <- nsr_resolve_status_set1(taxon_id, list(fine = places$fine, country = empty),
+                                  db, min_overlap, endemism = FALSE)
+    out$state_code <- ifelse(asked & nf > 0, lv$code, NA_character_)
+  }
+  out
+}
+
+#' One pass of the set resolver, against the polygons it is given
+#' @keywords internal
+#' @noRd
+nsr_resolve_status_set1 <- function(taxon_id, places, db, min_overlap = 0.01,
+                                    endemism = TRUE) {
   dt <- function(...) data.table::data.table(...)
   n <- length(taxon_id)
   blank <- rep(NA_character_, n)
@@ -109,7 +141,7 @@ nsr_resolve_status_set <- function(taxon_id, places, db, min_overlap = 0.01) {
     dt(qid = rep(seq_len(n), nf), region_key = unlist(fine), relation = "same"),
     dt(qid = rep(seq_len(n), nc), region_key = unlist(ctry),
        relation = "same")))                       # fixed below for rows that have a finer key
-  if (!nrow(Q)) return(nsr_set_finish(out, taxon_id, db, n))
+  if (!nrow(Q)) return(nsr_set_finish(out, taxon_id, db, n, endemism = endemism))
   Q[, relation := data.table::fifelse(has_fine[qid] & region_key %in% unlist(ctry), "within", relation)]
   Q[, taxon_id := taxon_id[qid]]
   Q <- Q[!is.na(taxon_id) & !is.na(region_key)]
@@ -135,7 +167,7 @@ nsr_resolve_status_set <- function(taxon_id, places, db, min_overlap = 0.01) {
 
   # the opinions themselves
   O <- db$chk_dt[Q, on = c("taxon_id", "region_key"), nomatch = 0L, allow.cartesian = TRUE]
-  if (!nrow(O)) return(nsr_set_finish(out, taxon_id, db, n, Q))
+  if (!nrow(O)) return(nsr_set_finish(out, taxon_id, db, n, Q, endemism = endemism))
 
   O[, `:=`(inc = relation %in% c("same", "within"), sub = relation == "contains",
            ovl = relation == "overlaps")]
@@ -222,13 +254,13 @@ nsr_resolve_status_set <- function(taxon_id, places, db, min_overlap = 0.01) {
   out$n_sub_native <- data.table::fifelse(is.na(res$n_sub_nat), 0L, as.integer(res$n_sub_nat))
   out$n_sub_introduced <- data.table::fifelse(is.na(res$n_sub_int), 0L, as.integer(res$n_sub_int))
   out$conflict <- !is.na(res$conflict_type) & res$conflict_type != "none"
-  nsr_set_finish(out, taxon_id, db, n, Q)
+  nsr_set_finish(out, taxon_id, db, n, Q, endemism = endemism)
 }
 
 #' Fill in the answers that need no opinions: absence, unknowns, and endemism
 #' @keywords internal
 #' @noRd
-nsr_set_finish <- function(out, taxon_id, db, n, Q = NULL) {
+nsr_set_finish <- function(out, taxon_id, db, n, Q = NULL, endemism = TRUE) {
   dt <- function(...) data.table::data.table(...)
   evaluable <- !is.na(taxon_id) & taxon_id %in% db$evaluable
   # the regions each query consulted, for the coverage test
@@ -252,7 +284,9 @@ nsr_set_finish <- function(out, taxon_id, db, n, Q = NULL) {
   out$conflict_type[no_answer] <- "none"
   out$n_sub_native[is.na(out$n_sub_native)] <- 0L
   out$n_sub_introduced[is.na(out$n_sub_introduced)] <- 0L
-  out$cultivated[out$code == "A"] <- 0L
+  # absence carries no opinion, so it carries no cultivation flag either: NA, matching
+  # nsr_reduce().  A 0 here would read as a checked negative and would differ from the
+  # row path for the same query, on nothing but batch size.
 
   # rows with no place at all, or no taxon
   none <- is.na(taxon_id)
@@ -263,7 +297,7 @@ nsr_set_finish <- function(out, taxon_id, db, n, Q = NULL) {
   }
 
   # --- endemism, the one rule allowed to look outside the queried polygon --------------
-  if (!is.null(Q) && nrow(Q)) {
+  if (endemism && !is.null(Q) && nrow(Q)) {
     inside <- Q[relation %in% c("same", "contains"), .(qid, region_key)]
     nat <- db$native_dt
     tq <- dt(qid = seq_len(n), taxon_id = taxon_id)[!is.na(taxon_id)]

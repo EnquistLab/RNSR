@@ -38,7 +38,13 @@
 #'   \code{TNRS::TNRS_local()}?  Names already matching WCVP accepted names need none.
 #' @param min_overlap Ignore region links covering less than this share of a region.
 #' @param quiet Suppress progress messages?
-#' @return A data.frame, one row per input row.
+#' @return A data.frame, one row per input row, carrying \code{user_id} from the input
+#'   (or sequential ids where the input has none), as \code{\link{NSR}} does.
+#' @section County and parish:
+#' \code{county_parish} is accepted and echoed, but not resolved: the political-division
+#' backbone stops at state and province, so \code{native_status_county_parish} is always
+#' \code{NA} and the answer is given at the finest level that could be matched.  A
+#' warning says so.  Coordinates are the way to ask a finer question.
 #' @export
 NSR_local <- function(occurrence_dataframe, dir = nsr_cache_dir(), resolve_names = TRUE,
                       min_overlap = 0.01, quiet = FALSE) {
@@ -55,6 +61,23 @@ NSR_local <- function(occurrence_dataframe, dir = nsr_cache_dir(), resolve_names
   lon <- num("longitude")
   lat <- num("latitude")
   n <- nrow(x)
+
+  # user_id on NSR()'s terms, so a result can be joined back to its input either way
+  user_id <- if ("user_id" %in% names(x)) x[["user_id"]] else rep(NA, n)
+  if (all(is.na(user_id))) user_id <- seq_len(n)
+  if (any(duplicated(user_id))) {
+    stop("user_id should be either null or populated by unique values", call. = FALSE)
+  }
+
+  # No county polygons exist offline, so county_parish cannot be answered.  The service
+  # answers it, so say plainly that this one does not rather than returning a silent NA.
+  if (any(!is.na(county) & nzchar(county))) {
+    warning("county_parish is not resolved offline: the backbone carries no county ",
+            "polygons, so native_status_county_parish is NA and the answer is given at ",
+            "the finest level that could be matched. Give coordinates for a finer answer.",
+            call. = FALSE)
+  }
+
   db <- nsr_local_db(dir)
 
   # ---- taxa -------------------------------------------------------------------------
@@ -109,6 +132,7 @@ NSR_local <- function(occurrence_dataframe, dir = nsr_cache_dir(), resolve_names
     native_status_opinions = res$opinions,
     regions_matched = places$matched,
     taxon_evaluable = !is.na(taxon_id) & taxon_id %in% db$evaluable,
+    user_id = user_id,
     stringsAsFactors = FALSE
   )
   rownames(out) <- NULL
@@ -121,6 +145,7 @@ nsr_session <- new.env(parent = emptyenv())
 #' @keywords internal
 #' @noRd
 nsr_local_db <- function(dir) {
+  nsr_need("nanoparquet")
   stamp <- paste(normalizePath(dir), file.mtime(nsr_table_path("checklist", dir)),
                  file.mtime(nsr_table_path("region-links", dir)))
   hit <- nsr_session$db
@@ -136,6 +161,20 @@ nsr_local_db <- function(dir) {
   db$links <- if (file.exists(lf)) as.data.frame(nanoparquet::read_parquet(lf)) else
     data.frame(from_region = character(0), to_region = character(0), relation = character(0),
                fraction = numeric(0), stringsAsFactors = FALSE)
+  db <- nsr_index_db(db)
+  nsr_session$db <- list(stamp = stamp, value = db)
+  db
+}
+
+#' Derive every lookup index the resolvers use from the four cache tables
+#'
+#' Internal.  Split out from \code{nsr_local_db()} so the resolvers can be exercised on
+#' tables held in memory, without a built cache: the row path and the set path must give
+#' the same answer for the same query, and that is only testable if a db can be made
+#' without a multi-gigabyte build.
+#' @keywords internal
+#' @noRd
+nsr_index_db <- function(db) {
   db$link_idx <- split(seq_len(nrow(db$links)), db$links$from_region)
   db$chk_idx <- split(seq_len(nrow(db$checklist)),
                       paste(db$checklist$taxon_id, db$checklist$region_key))
@@ -170,7 +209,6 @@ nsr_local_db <- function(dir) {
   db$evaluable <- unique(db$checklist$taxon_id)
   db$comprehensive <- db$sources$source_name[db$sources$is_comprehensive %in% TRUE]
   db$covered <- unique(db$checklist$region_key[db$checklist$source_name %in% db$comprehensive])
-  nsr_session$db <- list(stamp = stamp, value = db)
   db
 }
 
@@ -244,6 +282,12 @@ nsr_resolve_status <- function(taxon_id, places, db, min_overlap = 0.01) {
       out$code[i] <- "UNK"
       out$reason[i] <- if (is.na(tid)) "Taxon not matched to a species in the backbone" else
         "Place not matched to any region"
+      # nothing was consulted, which is a definite "no disagreement, no sub-polygons"
+      # rather than an unknown; the set path says the same for these rows
+      out$scope[i] <- "none"
+      out$conflict_type[i] <- "none"
+      out$n_sub_native[i] <- 0L
+      out$n_sub_introduced[i] <- 0L
       next
     }
     op <- nsr_opinions_for(tid, keys, db, min_overlap)
@@ -259,7 +303,7 @@ nsr_resolve_status <- function(taxon_id, places, db, min_overlap = 0.01) {
         op <- if (is.null(op)) add else Map(c, op, add)
       }
     }
-    consulted <- nsr_consulted_regions(keys, db)
+    consulted <- nsr_consulted_regions(keys, db, min_overlap)
     ev <- tid %in% db$evaluable
     r <- nsr_reduce(op, consulted, ev, db)
     if (identical(r$code, "N") && nsr_is_endemic(tid, keys, db, min_overlap)) {
@@ -277,10 +321,12 @@ nsr_resolve_status <- function(taxon_id, places, db, min_overlap = 0.01) {
     for (f in names(r)) out[[f]][i] <- r[[f]]
     # per-level codes, for the service's columns
     out$country_code[i] <- if (length(ctry)) {
-      nsr_reduce(nsr_opinions_for(tid, ctry, db, min_overlap), nsr_consulted_regions(ctry, db), ev, db)$code
+      nsr_reduce(nsr_opinions_for(tid, ctry, db, min_overlap),
+                 nsr_consulted_regions(ctry, db, min_overlap), ev, db)$code
     } else NA_character_
     out$state_code[i] <- if (length(fine)) {
-      nsr_reduce(nsr_opinions_for(tid, fine, db, min_overlap), nsr_consulted_regions(fine, db), ev, db)$code
+      nsr_reduce(nsr_opinions_for(tid, fine, db, min_overlap),
+                 nsr_consulted_regions(fine, db, min_overlap), ev, db)$code
     } else NA_character_
   }
   out
@@ -350,7 +396,7 @@ nsr_endemic_elsewhere <- function(taxon_id, keys, db, min_overlap = 0.01) {
   if (is.null(rows)) return(NA_character_)
   nat <- unique(db$chk_region[rows][db$chk_status[rows] == "native"])
   if (!length(nat)) return(NA_character_)
-  if (any(nat %in% nsr_consulted_regions(keys, db))) return(NA_character_)
+  if (any(nat %in% nsr_consulted_regions(keys, db, min_overlap))) return(NA_character_)
   nm <- function(k) {
     i <- match(k, db$regions$region_key)
     if (is.na(i)) k else db$regions$region_name[i]
@@ -372,13 +418,19 @@ nsr_endemic_elsewhere <- function(taxon_id, keys, db, min_overlap = 0.01) {
 #' Internal.  Used to decide whether absence is interpretable: a query about California
 #' finds no source publishing against GADM California, but WGSRPD's CAL is the same place
 #' and is comprehensively listed, so absence there does mean something.
+#'
+#' \code{min_overlap} applies here for the same reason it applies to opinions: a link
+#' covering a sliver of a region is not that region being listed, and letting one through
+#' would turn "no opinion" into \code{A}, or suppress an \code{Ie}, on the strength of a
+#' shared coastline.  The set path filters its links once, when it builds them.
 #' @keywords internal
 #' @noRd
-nsr_consulted_regions <- function(keys, db) {
+nsr_consulted_regions <- function(keys, db, min_overlap = 0.01) {
   if (!length(keys)) return(character(0))
   li <- unlist(mget(keys, db$link_env, ifnotfound = list(NULL)), use.names = FALSE)
   if (!length(li)) return(keys)
-  unique(c(keys, db$link_to[li][db$link_rel[li] %in% c("same", "within", "contains")]))
+  keep <- db$link_rel[li] %in% c("same", "within", "contains") & db$link_frac[li] >= min_overlap
+  unique(c(keys, db$link_to[li][keep]))
 }
 
 #' What kind of disagreement is this?

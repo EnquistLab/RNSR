@@ -85,10 +85,16 @@ resolution WCVP gives us) is too coarse to say anything about sub-country status
 
 | Source | What it gives | Format, size | Licence |
 |---|---|---|---|
-| **powo** | global native/introduced by WGSRPD level 3 | WCVP v15 **already in hand** (`data/wcvp_v15/wcvp_distribution.csv`), no download | CC BY 4.0 |
+| **wcvp** | global native/introduced by WGSRPD level 3 | WCVP v15 **already in hand** (`data/wcvp_v15/wcvp_distribution.csv`), no download | CC BY 4.0 |
 | ~~usda~~ | USA, by state | **not obtainable**: the per-state export is no longer served; the GBIF copy is names only and the API gives region-level status | CC0 |
 | **vascan** | Canada, by province; native/introduced/ephemeral | DwC-A, `data.canadensys.net/ipt/archive.do?r=vascan`, ~10 MB, updated 2026-08-04 | CC0 |
 | **flbr** | Brazil, by state; native/naturalised/cultivated | DwC-A, `ipt.jbrj.gov.br/jbrj/archive.do?r=lista_especies_flora_brasil`, ~50-100 MB | CC BY 4.0 |
+
+**The source is named `wcvp`, not `powo` (BM, 2026-09-22):** it is the WCVP archive that is
+read, and it is what `TNRS_local(sources = "wcvp")` calls the same data, so the stack uses one
+name for one dataset. `"powo"` is accepted as a synonym in `sources =` and in `files =`. The
+cost is that `native_status_sources` no longer matches the live service's label for this source,
+which is a known diff when validating `NSR_local()` against `NSR()`.
 
 POWO is the service's global backbone and is the same Kew dataset as WCVP, at the same resolution;
 we already apply its native filter in the garden pipeline (script 02 keeps `introduced == 0 &

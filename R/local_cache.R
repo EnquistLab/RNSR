@@ -31,6 +31,36 @@ nsr_provenance_path <- function(component, dir = nsr_cache_dir()) {
 #' @noRd
 nsr_tables <- function() c("sources", "taxa", "regions", "checklist")
 
+#' Resolve a source's accepted synonyms to its canonical name
+#'
+#' Internal.  The Kew dataset is read as WCVP and reported as \code{wcvp}, which is what
+#' it is and what \code{TNRS_local()} calls the same data.  \code{powo}, the portal the
+#' live service names it after, is accepted so existing calls and notes keep working.
+#' @keywords internal
+#' @noRd
+nsr_canonical_source <- function(x) {
+  if (!length(x)) return(x)
+  alias <- c(powo = "wcvp")
+  i <- match(x, names(alias))
+  unname(ifelse(is.na(i), x, alias[i]))
+}
+
+#' Require the optional packages a local-NSR path needs
+#'
+#' Internal.  The offline implementation is all Suggests: the API functions must keep
+#' working on an install that has none of it, so every entry point says what is missing
+#' rather than failing inside a \code{::} call.
+#' @keywords internal
+#' @noRd
+nsr_need <- function(..., what = "The local NSR") {
+  for (pkg in c(...)) {
+    if (!requireNamespace(pkg, quietly = TRUE)) {
+      stop(what, " needs the '", pkg, "' package.", call. = FALSE)
+    }
+  }
+  invisible(TRUE)
+}
+
 #' Checklist sources the local NSR can build
 #'
 #' Internal.  One entry per source: what it covers, whether it is comprehensive for its
@@ -45,8 +75,8 @@ nsr_tables <- function() c("sources", "taxa", "regions", "checklist")
 #' @noRd
 nsr_builtin_registry <- function() {
   list(
-    powo = list(
-      source_name = "powo",
+    wcvp = list(
+      source_name = "wcvp",
       source_name_full = "Plants of the World Online / World Checklist of Vascular Plants (WCVP)",
       version = "v15",
       url = "https://sftp.kew.org/pub/data-repositories/WCVP/",
@@ -72,7 +102,7 @@ nsr_builtin_registry <- function() {
     # usda is deliberately absent: the USDA no longer serves the per-state native-status
     # export the service was built from. The GBIF copy of PLANTS is names only, and the
     # current API gives status by region (CAN / L48 / AK / HI), not by state, which adds
-    # nothing over POWO. See dev_notes/01-offline-nsr-design.md.
+    # nothing over WCVP. See dev_notes/01-offline-nsr-design.md.
     flbr = list(
       source_name = "flbr",
       source_name_full = "Flora e Funga do Brasil (Lista Oficial)",
@@ -95,6 +125,7 @@ nsr_builtin_registry <- function() {
 #'   records and taxa it contributed, and when it was built.
 #' @export
 NSR_local_status <- function(dir = nsr_cache_dir()) {
+  nsr_need("nanoparquet")
   reg <- nsr_builtin_registry()
   built_tables <- vapply(nsr_tables(), function(t) file.exists(nsr_table_path(t, dir)), logical(1))
   src <- if (built_tables[["sources"]]) {

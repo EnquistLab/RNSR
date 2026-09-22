@@ -1,9 +1,19 @@
 #' Build the local native-status reference
 #'
-#' Downloads (or reads) each checklist source, resolves its names against WCVP with
+#' Reads each checklist source, resolves its names against WCVP with
 #' \code{TNRS::TNRS_local()} and its political divisions against the GNRS backbone, and
-#' writes the shared cache tables.  Sources are fetched on the user's machine; nothing
+#' writes the shared cache tables.  Sources are acquired on the user's machine; nothing
 #' derived ships with the package.
+#'
+#' \strong{The archives are not downloaded for you.}  \code{vascan} and \code{flbr} must
+#' be supplied through \code{files}, and each stops with the URL to fetch if they are
+#' not; \code{wcvp} is the exception, since it reads the WCVP archive already in the
+#' TNRS cache when there is one.  This is why \code{sources} defaults to \code{"wcvp"}
+#' alone: it is the only source that can build unattended.
+#'
+#' \code{"powo"} is accepted as a synonym for \code{"wcvp"} - it is the name the live
+#' service reports for the same Kew dataset - but \code{wcvp} is what gets written to
+#' \code{native_status_sources}.
 #'
 #' Tables written: \code{nsr-sources} (one per source, with licence and whether it is
 #' comprehensive), \code{nsr-taxa} (one per taxon, keyed on the WCVP accepted id),
@@ -14,14 +24,15 @@
 #'
 #' @param sources Which sources to build.  See \code{NSR_local_status()}.
 #' @param dir Cache directory, shared with GNRS and GVS.
-#' @param files Named list of local archives to read instead of downloading, e.g.
-#'   \code{list(flbr = "flbr_dwca.zip")}.  For \code{powo}, the WCVP zip; if absent, the
-#'   copy in the TNRS cache is used when there is one.
+#' @param files Named list of local archives to read, e.g.
+#'   \code{list(flbr = "flbr_dwca.zip")}.  Required for \code{vascan} and \code{flbr}.
+#'   For \code{wcvp}, the WCVP zip; if absent, the copy in the TNRS cache is used when
+#'   there is one.
 #' @param overwrite Rebuild sources that are already built?
 #' @param quiet Suppress progress messages?
 #' @return Invisibly, \code{NSR_local_status()}.
 #' @export
-NSR_local_build <- function(sources = c("powo", "vascan", "flbr"),
+NSR_local_build <- function(sources = "wcvp",
                             dir = nsr_cache_dir(create = TRUE),
                             files = list(), overwrite = FALSE, quiet = FALSE) {
   for (pkg in c("nanoparquet", "TNRS")) {
@@ -30,7 +41,8 @@ NSR_local_build <- function(sources = c("powo", "vascan", "flbr"),
     }
   }
   reg <- nsr_builtin_registry()
-  sources <- match.arg(sources, names(reg), several.ok = TRUE)
+  sources <- match.arg(nsr_canonical_source(sources), names(reg), several.ok = TRUE)
+  if (length(files)) names(files) <- nsr_canonical_source(names(files))
   msg <- function(...) if (!quiet) message(...)
 
   existing <- lapply(nsr_tables(), function(t) {
@@ -51,7 +63,7 @@ NSR_local_build <- function(sources = c("powo", "vascan", "flbr"),
     msg("Importing ", s, " ...")
     t0 <- Sys.time()
     raw[[s]] <- switch(s,
-      powo = nsr_import_powo(files$powo, bb, quiet),
+      wcvp = nsr_import_wcvp(files$wcvp, bb, quiet),
       vascan = nsr_import_vascan(files$vascan, bb, quiet),
       flbr = nsr_import_flbr(files$flbr, bb, quiet)
     )
@@ -136,8 +148,16 @@ NSR_local_build <- function(sources = c("powo", "vascan", "flbr"),
                n_records = nrow(checklist), n_taxa = nrow(taxa), n_regions = nrow(regions)),
           nsr_provenance_path("nsr", dir))
 
-  # spatial links between geographies, where GVS's GADM index is available
+  # The WGSRPD raster is what places coordinates in a WCVP region, so it is needed
+  # whenever a source publishes against WGSRPD - not only when there is a second
+  # geography to link it to.  A wcvp-only build needs it just as much.
   systems <- unique(regions$system)
+  if ("wgsrpd3" %in% systems && !file.exists(nsr_raster_path("wgsrpd3", dir))) {
+    msg("Building the WGSRPD level-3 raster ...")
+    try(nsr_build_wgsrpd_raster(dir = dir, quiet = quiet), silent = FALSE)
+  }
+
+  # spatial links between geographies, where GVS's GADM index is available
   if (length(systems) > 1 && file.exists(file.path(dir, "gadmindex-units-30s.tif"))) {
     msg("Linking region systems (", paste(systems, collapse = ", "), ") ...")
     try(nsr_build_region_links(dir = dir, quiet = quiet), silent = FALSE)

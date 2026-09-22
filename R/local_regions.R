@@ -48,6 +48,7 @@ nsr_build_wgsrpd_raster <- function(dir = nsr_cache_dir(create = TRUE), resoluti
 #' @keywords internal
 #' @noRd
 nsr_wgsrpd_polygons <- function() {
+  nsr_need("sf", what = "The WGSRPD polygons")
   if (requireNamespace("rWCVPdata", quietly = TRUE)) {
     p <- try(rWCVPdata::wgsrpd3, silent = TRUE)
     if (!inherits(p, "try-error")) return(sf::st_as_sf(p))
