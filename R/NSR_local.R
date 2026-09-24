@@ -331,6 +331,12 @@ nsr_query_regions <- function(lon, lat, country, state, county, dir, db,
   bb <- try(nsr_gnrs_backbone(dir), silent = TRUE)
   pd <- if (!inherits(bb, "try-error")) nsr_match_poldiv(country, state, bb) else NULL
   pd0 <- if (!inherits(bb, "try-error")) nsr_match_poldiv(country, NULL, bb) else NULL
+  # a declared state that belongs to another division system (a Norwegian county from
+  # after the 2018 or 2020 reform, a lan under the name records write) contributes the
+  # GADM units it covers, so the question is answered below country level instead of
+  # falling back to the country
+  iso0 <- if (!is.null(pd0)) bb$country$iso[match(pd0$country_id, bb$country$country_id)] else rep(NA_character_, n)
+  alt_keys <- nsr_altdiv_keys(iso0, state, dir)
 
   at <- function(k, p) grep(p, k, value = TRUE)
   for (i in seq_len(n)) {
@@ -343,6 +349,7 @@ nsr_query_regions <- function(lon, lat, country, state, county, dir, db,
       gid0 <- if (!is.na(pd0$country_id[i]))
         bb$country$gid_0[match(pd0$country_id[i], bb$country$country_id)] else NA_character_
       if (!is.na(gid1)) kn <- c(kn, paste0("gadm1:", gid1))
+      if (is.na(gid1) && length(alt_keys[[i]])) kn <- c(kn, alt_keys[[i]])
       if (!is.na(gid0)) kn <- c(kn, paste0("gadm0:", gid0))
     }
     xy[[i]] <- kx
