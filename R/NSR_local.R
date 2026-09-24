@@ -1,8 +1,18 @@
 #' Determine native status without an internet connection
 #'
 #' Offline Native Status Resolver.  For each taxon and place, the status every built
-#' checklist gives it, reduced to one answer.  Output carries \code{\link{NSR}}'s columns,
-#' with four added.
+#' checklist gives it, reduced to one answer.
+#'
+#' Output carries \code{\link{NSR}}'s columns, and adds: \code{isEndemic};
+#' \code{native_status_conflict} and \code{native_status_conflict_type}, saying whether
+#' and how the sources disagreed; \code{native_status_scope}, which of the polygons
+#' bearing on the place produced the answer; \code{n_subpolygons_native} and
+#' \code{n_subpolygons_introduced}; \code{native_status_opinions}, every opinion consulted;
+#' \code{native_status_coordinates}, \code{native_status_names} and \code{place_conflict}
+#' (see Place); \code{regions_matched}, what the place was matched on; and
+#' \code{taxon_evaluable}, whether any source holds native status for the taxon at all -
+#' which is what separates \code{A} (absent) from \code{UNK} (no data).  The coordinates
+#' given are echoed as \code{latitude} and \code{longitude}.
 #'
 #' \strong{Place.}  By default the answer comes from political division names
 #' (\code{country}, \code{state_province}, \code{county_parish}), which are resolved to
@@ -444,7 +454,10 @@ nsr_resolve_status <- function(taxon_id, places, db, min_overlap = 0.01,
         op <- if (is.null(op)) add else Map(c, op, add)
       }
     }
-    consulted <- nsr_consulted_regions(keys, db, min_overlap)
+    # the ancestor country supplies opinions above, so absence has to be read against it
+    # too, or a state with no coverage of its own inside a comprehensively listed country
+    # answers UNK here and A in the set path, which reads Q's country row
+    consulted <- nsr_consulted_regions(c(keys, anc), db, min_overlap)
     ev <- tid %in% db$evaluable
     r <- nsr_reduce(op, consulted, ev, db)
     if (identical(r$code, "N") && nsr_is_endemic(tid, keys, db, min_overlap)) {
@@ -489,11 +502,22 @@ nsr_gadm_children <- function(keys, db) {
 #' @keywords internal
 #' @noRd
 nsr_gadm_parents <- function(keys, db) {
-  if (!length(keys) || !length(db$gadm_parent)) return(character(0))
+  if (!length(keys)) return(character(0))
   k <- keys[startsWith(keys, "gadm1:")]
-  if (!length(k)) return(character(0))
-  p <- as.character(unname(db$gadm_parent[k]))
+  p <- if (length(k) && length(db$gadm_parent))
+    as.character(unname(db$gadm_parent[k])) else character(0)
   setdiff(p[!is.na(p)], keys)
+}
+
+#' The countries a set of regions lies in, a country counting as its own
+#'
+#' Internal.  For the confined-range test only.  A taxon native both to a country row
+#' and to one of that country's states is confined to it, so gadm0 has to answer for
+#' itself here - it has no parent to look up, and its links only reach other geographies.
+#' @keywords internal
+#' @noRd
+nsr_gadm_countries <- function(keys, db) {
+  unique(c(nsr_gadm_parents(keys, db), keys[startsWith(keys, "gadm0:")]))
 }
 
 #' Opinions about one taxon bearing on a set of regions
@@ -584,10 +608,10 @@ nsr_endemic_elsewhere <- function(taxon_id, keys, db, min_overlap = 0.01) {
   if (length(nat) == 1) return(nm(nat))
   containers <- lapply(nat, function(r) {
     li <- db$link_env[[r]]
-    if (is.null(li)) return(nsr_gadm_parents(r, db))
+    if (is.null(li)) return(nsr_gadm_countries(r, db))
     keep <- db$link_rel[li] %in% c("same", "within") & db$link_frac[li] >= min_overlap &
       startsWith(db$link_to[li], "gadm0:")
-    c(db$link_to[li][keep], nsr_gadm_parents(r, db))
+    c(db$link_to[li][keep], nsr_gadm_countries(r, db))
   })
   common <- Reduce(intersect, containers)
   if (length(common)) nm(common[1]) else NA_character_

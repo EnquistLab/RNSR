@@ -4,11 +4,23 @@
 #' political divisions NSR keys on are GNRS's, and a user who has built either of the
 #' others already has them.  \code{options(NSR.cache_dir=)} overrides, then
 #' \code{options(GNRS.cache_dir=)}, then \code{tools::R_user_dir("GNRS", "cache")}.
+#'
+#' \code{tools::R_user_dir()} arrived in R 4.0.0, and the package supports R 3.5 for the
+#' API functions.  Rather than invent a different default on old R - which would put the
+#' cache somewhere GNRS and GVS do not look, and silently give each package its own copy -
+#' this says what is missing and how to set it.  The API functions never reach here.
 #' @keywords internal
 #' @noRd
 nsr_cache_dir <- function(create = FALSE) {
-  dir <- getOption("NSR.cache_dir",
-                   getOption("GNRS.cache_dir", tools::R_user_dir("GNRS", which = "cache")))
+  fallback <- function() {
+    if (!is.null(getNamespace("tools")[["R_user_dir"]])) {
+      return(tools::R_user_dir("GNRS", which = "cache"))
+    }
+    stop("The local NSR needs R >= 4.0.0 for the shared cache location, or an explicit ",
+         "one: set options(GNRS.cache_dir = ) to the directory GNRS and GVS use, or pass ",
+         "dir = to this function.", call. = FALSE)
+  }
+  dir <- getOption("NSR.cache_dir", getOption("GNRS.cache_dir", fallback()))
   if (create && !dir.exists(dir)) dir.create(dir, recursive = TRUE, showWarnings = FALSE)
   dir
 }

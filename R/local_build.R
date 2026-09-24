@@ -99,6 +99,12 @@ NSR_local_build <- function(sources = "wcvp",
 
   # ---- assemble ---------------------------------------------------------------------
   keep_old <- function(x, col) if (is.null(x)) NULL else x[!x[[col]] %in% todo, , drop = FALSE]
+  # A cache built before extinct records were retained has no is_extinct column, and the
+  # rows kept from it are rbind()ed with new rows that do; give it the column first, or
+  # adding a source to an older cache fails on the bind.
+  if (!is.null(existing$checklist) && is.null(existing$checklist$is_extinct)) {
+    existing$checklist$is_extinct <- 0L
+  }
   chk <- lapply(names(raw), function(s) {
     d <- raw[[s]]
     fill <- is.na(d$taxon_id)
@@ -162,8 +168,7 @@ NSR_local_build <- function(sources = "wcvp",
     raster_ok <- !inherits(r, "try-error")
     if (!raster_ok) {
       warning("The WGSRPD level-3 raster could not be built: ",
-              conditionMessage(attr(r, "condition")), "
-",
+              conditionMessage(attr(r, "condition")), "\n",
               "The checklist tables are written, but until this raster exists no query ",
               "can reach a WCVP opinion: coordinates cannot be placed in a WCVP region, ",
               "and division names resolve to GADM, which needs the link table below. ",
@@ -183,8 +188,7 @@ NSR_local_build <- function(sources = "wcvp",
     r <- try(nsr_build_region_links(dir = dir, quiet = quiet), silent = TRUE)
     if (inherits(r, "try-error")) {
       warning("The region link table could not be built: ",
-              conditionMessage(attr(r, "condition")), "
-",
+              conditionMessage(attr(r, "condition")), "\n",
               "The cache is written, but queries by division name will not reach sources ",
               "published against another geography. Re-run NSR_local_build(overwrite = TRUE) ",
               "once the cause is fixed.", call. = FALSE)

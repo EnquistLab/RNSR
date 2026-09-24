@@ -21,7 +21,10 @@ fixture_db <- function() {
     "t6 wgsrpd3:QUE    native     wcvp   0 1",
     "t6 wgsrpd3:BZL    native     wcvp   0 0",
     # t7 is the contrast: native ONLY in Brazil, never recorded in Quebec at all
-    "t7 wgsrpd3:BZL    native     wcvp   0 0")
+    "t7 wgsrpd3:BZL    native     wcvp   0 0",
+    # t8 is native to a country row AND to one of that country's states
+    "t8 gadm0:CAN      native     vascan 0 0",
+    "t8 gadm1:CAN.11_1 native     vascan 0 0")
   f <- do.call(rbind, strsplit(trimws(spec), "[[:space:]]+"))
   checklist <- data.frame(
     taxon_id = f[, 1], region_key = f[, 2], status = f[, 3], source_name = f[, 4],
@@ -34,8 +37,8 @@ fixture_db <- function() {
     fraction    = c(0.99,             0.99,             0.001),
     stringsAsFactors = FALSE)
   taxa <- data.frame(
-    taxon_id = paste0("t", 1:7),
-    species_name = paste("Sp", 1:7),
+    taxon_id = paste0("t", 1:8),
+    species_name = paste("Sp", 1:8),
     family = "Fam", genus = "Gen", rank = "species", stringsAsFactors = FALSE)
   sources <- data.frame(source_name = c("wcvp", "vascan"), is_comprehensive = TRUE,
                         stringsAsFactors = FALSE)
@@ -222,4 +225,49 @@ test_that("keys split into the finest level named and its country", {
   expect_equal(s$fine[[2]], character(0))
   expect_equal(s$country[[2]], "gadm0:BRA")
   expect_equal(s$fine[[3]], character(0))
+})
+
+# The two paths must agree on the answers that need no opinions at all, not just on the
+# ones that do.  Each of these diverged.
+test_that("a matched taxon with nowhere to look is not an uncovered place", {
+  skip_if_not_installed("data.table")
+  db <- fixture_db()
+  nowhere <- list(fine = list(character(0)), country = list(character(0)))
+  row <- NSR:::nsr_resolve_status("t1", nowhere, db)
+  set <- NSR:::nsr_resolve_status_set("t1", nowhere, db)
+  expect_equal(row$reason, "Place not matched to any region")
+  expect_equal(set$reason, row$reason)
+  expect_equal(set$code, row$code)
+  expect_equal(set$scope, row$scope)
+})
+
+test_that("nothing disagreeing is \"none\", not unknown", {
+  skip_if_not_installed("data.table")
+  db <- fixture_db()
+  # a country-only query is answered by the states inside it, so no opinion is recorded
+  # against the polygon itself and the conflict summary has nothing to aggregate
+  p <- list(fine = list(character(0)), country = list("gadm0:CAN"))
+  expect_equal(NSR:::nsr_resolve_status("t4", p, db)$conflict_type, "none")
+  expect_equal(NSR:::nsr_resolve_status_set("t4", p, db)$conflict_type, "none")
+})
+
+test_that("absence is read against the country a state was given with", {
+  skip_if_not_installed("data.table")
+  db <- fixture_db()
+  # CAN.9_1 carries no checklist rows and no links, but it was asked about as part of
+  # Canada, whose rows the answer already draws on - so absence there is interpretable
+  p <- list(fine = list("gadm1:CAN.9_1"), country = list("gadm0:CAN"))
+  expect_equal(NSR:::nsr_resolve_status("t3", p, db)$code, "A")
+  expect_equal(NSR:::nsr_resolve_status_set("t3", p, db)$code, "A")
+})
+
+test_that("a country counts as its own container for a confined range", {
+  skip_if_not_installed("data.table")
+  db <- fixture_db()
+  # t8 is native to Canada the country row and to Quebec the state; asked about Brazil
+  # it is absent, and its whole native range is confined to Canada
+  p <- list(fine = list("wgsrpd3:BZL"), country = list(character(0)))
+  expect_equal(NSR:::nsr_resolve_status("t8", p, db)$code, "Ie")
+  expect_equal(NSR:::nsr_resolve_status_set("t8", p, db)$code, "Ie")
+  expect_match(NSR:::nsr_resolve_status("t8", p, db)$reason, "Canada")
 })

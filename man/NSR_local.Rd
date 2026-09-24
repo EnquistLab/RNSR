@@ -42,10 +42,20 @@ A data.frame, one row per input row, carrying \code{user_id} from the input
 }
 \description{
 Offline Native Status Resolver.  For each taxon and place, the status every built
-checklist gives it, reduced to one answer.  Output carries \code{\link{NSR}}'s columns,
-with four added.
+checklist gives it, reduced to one answer.
 }
 \details{
+Output carries \code{\link{NSR}}'s columns, and adds: \code{isEndemic};
+\code{native_status_conflict} and \code{native_status_conflict_type}, saying whether
+and how the sources disagreed; \code{native_status_scope}, which of the polygons
+bearing on the place produced the answer; \code{n_subpolygons_native} and
+\code{n_subpolygons_introduced}; \code{native_status_opinions}, every opinion consulted;
+\code{native_status_coordinates}, \code{native_status_names} and \code{place_conflict}
+(see Place); \code{regions_matched}, what the place was matched on; and
+\code{taxon_evaluable}, whether any source holds native status for the taxon at all -
+which is what separates \code{A} (absent) from \code{UNK} (no data).  The coordinates
+given are echoed as \code{latitude} and \code{longitude}.
+
 \strong{Place.}  By default the answer comes from political division names
 (\code{country}, \code{state_province}, \code{county_parish}), which are resolved to
 GADM units through the GNRS backbone and carried to each source's own geography by the

@@ -37,6 +37,13 @@ nsr_confined_ranges <- function(nat, db) {
                          list(region_key = from_region, country = to_region)]),
         use.names = TRUE))
     }
+    # a country row is its own country: a taxon native both to gadm0:CAN and to one of
+    # Canada's states is confined to Canada, and without this it has no common container
+    own <- unique(nat$region_key[startsWith(nat$region_key, "gadm0:")])
+    if (length(own)) {
+      lk <- unique(data.table::rbindlist(
+        list(lk, dt(region_key = own, country = own)), use.names = TRUE))
+    }
     m <- merge(nat[taxon_id %in% multi$taxon_id], lk, by = "region_key", allow.cartesian = TRUE)
     per <- m[, list(n_in = data.table::uniqueN(region_key)), by = c("taxon_id", "country")]
     per <- merge(per, multi, by = "taxon_id")
@@ -163,7 +170,9 @@ nsr_resolve_status_set1 <- function(taxon_id, places, db, min_overlap = 0.01,
     dt(qid = rep(seq_len(n), nf), region_key = unlist(fine), relation = "same"),
     dt(qid = rep(seq_len(n), nc), region_key = unlist(ctry),
        relation = "same")))                       # fixed below for rows that have a finer key
-  if (!nrow(Q)) return(nsr_set_finish(out, taxon_id, db, n, endemism = endemism))
+  has_place <- nf > 0 | nc > 0
+  if (!nrow(Q)) return(nsr_set_finish(out, taxon_id, db, n, endemism = endemism,
+                                      has_place = has_place))
   Q[, relation := data.table::fifelse(has_fine[qid] & region_key %in% unlist(ctry), "within", relation)]
   Q[, taxon_id := taxon_id[qid]]
   Q <- Q[!is.na(taxon_id) & !is.na(region_key)]
@@ -203,7 +212,8 @@ nsr_resolve_status_set1 <- function(taxon_id, places, db, min_overlap = 0.01,
   O <- db$chk_dt[Q, on = c("taxon_id", "region_key"), nomatch = 0L, allow.cartesian = TRUE]
   # after the join, so the checklist is never copied just to drop 0.14% of its rows
   if (exclude_extinct && nrow(O) && "is_extinct" %in% names(O)) O <- O[is_extinct == 0L]
-  if (!nrow(O)) return(nsr_set_finish(out, taxon_id, db, n, Q, endemism = endemism))
+  if (!nrow(O)) return(nsr_set_finish(out, taxon_id, db, n, Q, endemism = endemism,
+                                      has_place = has_place))
 
   O[, `:=`(inc = relation %in% c("same", "within"), sub = relation == "contains",
            ovl = relation == "overlaps")]
@@ -290,13 +300,17 @@ nsr_resolve_status_set1 <- function(taxon_id, places, db, min_overlap = 0.01,
   out$n_sub_native <- data.table::fifelse(is.na(res$n_sub_nat), 0L, as.integer(res$n_sub_nat))
   out$n_sub_introduced <- data.table::fifelse(is.na(res$n_sub_int), 0L, as.integer(res$n_sub_int))
   out$conflict <- !is.na(res$conflict_type) & res$conflict_type != "none"
-  nsr_set_finish(out, taxon_id, db, n, Q, endemism = endemism)
+  # "none" is the contract value for a result nothing disagreed about; NA here would be
+  # read as unknown, and the row path says "none" for the same query
+  out$conflict_type[!is.na(out$code) & is.na(out$conflict_type)] <- "none"
+  nsr_set_finish(out, taxon_id, db, n, Q, endemism = endemism, has_place = has_place)
 }
 
 #' Fill in the answers that need no opinions: absence, unknowns, and endemism
 #' @keywords internal
 #' @noRd
-nsr_set_finish <- function(out, taxon_id, db, n, Q = NULL, endemism = TRUE) {
+nsr_set_finish <- function(out, taxon_id, db, n, Q = NULL, endemism = TRUE,
+                           has_place = TRUE) {
   dt <- function(...) data.table::data.table(...)
   evaluable <- !is.na(taxon_id) & taxon_id %in% db$evaluable
   # the regions each query consulted, for the coverage test
@@ -323,6 +337,16 @@ nsr_set_finish <- function(out, taxon_id, db, n, Q = NULL, endemism = TRUE) {
   # absence carries no opinion, so it carries no cultivation flag either: NA, matching
   # nsr_reduce().  A 0 here would read as a checked negative and would differ from the
   # row path for the same query, on nothing but batch size.
+
+  # A taxon that was matched but has nowhere to look is not the same as a place no
+  # source covers, and the row path distinguishes them; the generic absence logic above
+  # would otherwise report this as uncovered.
+  noplace <- !is.na(taxon_id) & !rep_len(has_place, n)
+  if (any(noplace)) {
+    out$code[noplace] <- "UNK"
+    out$reason[noplace] <- "Place not matched to any region"
+    out$scope[noplace] <- "none"
+  }
 
   # rows with no place at all, or no taxon
   none <- is.na(taxon_id)
