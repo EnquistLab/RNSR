@@ -133,6 +133,25 @@ NSR_local <- function(occurrence_dataframe, dir = nsr_cache_dir(), resolve_names
 
   db <- nsr_local_db(dir)
 
+  # A cache can be built and still unable to reach a source: if the WGSRPD raster or the
+  # link table failed during the build, WCVP's opinions are in the checklist but no query
+  # arrives at them, and every answer that depends on WCVP comes back UNK looking like an
+  # honest "no data".  Say so, once per session per state of the cache.
+  if ("wgsrpd3" %in% db$regions$system) {
+    geo <- nsr_geography(dir)
+    gaps <- c(
+      if (!geo$links) "division names cannot reach them (the region link table is missing)",
+      if (use_coordinates && !geo$raster)
+        "coordinates cannot be placed in their regions (the WGSRPD raster is missing)")
+    if (length(gaps)) {
+      nsr_warn_once(paste(normalizePath(dir), paste(gaps, collapse = "|")),
+                    "This cache holds WCVP opinions, but ", paste(gaps, collapse = "; and "),
+                    ". Answers that depend on WCVP will be UNK. Re-run ",
+                    "NSR_local_build(overwrite = TRUE) and read its warnings for the cause; ",
+                    "NSR_local_status() shows what each source can answer.")
+    }
+  }
+
   # ---- taxa -------------------------------------------------------------------------
   # WCVP records distributions for genera too, so a genus query is answerable directly.
   # What must not happen is a bare genus being RESOLVED to some species of that genus,

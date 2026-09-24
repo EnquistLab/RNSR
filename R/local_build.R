@@ -198,9 +198,12 @@ NSR_local_build <- function(sources = "wcvp",
             "against WGSRPD; coordinates still work. Build it with GVS, then re-run ",
             "NSR_local_build(overwrite = TRUE).", call. = FALSE)
   }
+  geo <- nsr_geography(dir)
+  incomplete <- "wgsrpd3" %in% systems && !(geo$raster && geo$links)
   msg("Built: ", format(nrow(checklist), big.mark = ","), " checklist records, ",
       format(nrow(taxa), big.mark = ","), " taxa, ", format(nrow(regions), big.mark = ","),
-      " regions.")
+      " regions.",
+      if (incomplete) " Geography INCOMPLETE - see the warnings above and NSR_local_status().")
   invisible(NSR_local_status(dir))
 }
 

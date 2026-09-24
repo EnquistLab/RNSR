@@ -130,11 +130,49 @@ nsr_builtin_registry <- function() {
   )
 }
 
+#' What the cache's geography can support, read off the files themselves
+#'
+#' Internal.  A source is only useful if a query can reach the regions it publishes
+#' against.  WCVP publishes against WGSRPD: coordinates reach it through the WGSRPD raster,
+#' and division names - which always resolve to GADM - reach it only through the region
+#' link table.  VASCAN and Flora do Brasil publish against GADM states, which names reach
+#' directly and coordinates reach through GVS's GADM index.  Read from the files rather
+#' than recorded at build time, so it cannot go stale and also covers caches built by
+#' earlier versions (a wcvp-only build once skipped the link table altogether).
+#' @keywords internal
+#' @noRd
+nsr_geography <- function(dir) {
+  list(raster = file.exists(nsr_raster_path("wgsrpd3", dir)) &&
+                file.exists(nsr_raster_path("wgsrpd3_index", dir)),
+       links = file.exists(nsr_table_path("region-links", dir)),
+       gadm_index = file.exists(file.path(dir, "gadmindex-units-30s.tif")))
+}
+
+#' Warn once per session about a given state of a given cache
+#'
+#' Internal.  Keyed on the cache and on what is wrong with it, so a gap is reported the
+#' first time a query meets it, again if it changes, and not on every call of a loop.
+#' @keywords internal
+#' @noRd
+nsr_warn_once <- function(key, ...) {
+  if (is.null(nsr_session$warned)) nsr_session$warned <- character(0)
+  if (key %in% nsr_session$warned) return(invisible(FALSE))
+  nsr_session$warned <- c(nsr_session$warned, key)
+  warning(..., call. = FALSE)
+  invisible(TRUE)
+}
+
 #' Which parts of the local NSR are built
 #'
 #' @param dir Cache directory.  Defaults to the one shared with GNRS and GVS.
 #' @return A data.frame with one row per source: whether it is built, how many checklist
-#'   records and taxa it contributed, and when it was built.
+#'   records and taxa it contributed, and when it was built; and whether a query can
+#'   actually reach it - \code{answers_by_name} and \code{answers_by_coordinates}.  A
+#'   source can be built and still unreachable: WCVP's opinions are published against
+#'   WGSRPD areas, so names reach them only through the region link table and coordinates
+#'   only through the WGSRPD raster.  If either failed during the build, \code{built} is
+#'   \code{TRUE} and the corresponding column is \code{FALSE}; re-run
+#'   \code{NSR_local_build(overwrite = TRUE)} and read its warnings for the cause.
 #' @export
 NSR_local_status <- function(dir = nsr_cache_dir()) {
   nsr_need("nanoparquet")
@@ -143,14 +181,18 @@ NSR_local_status <- function(dir = nsr_cache_dir()) {
   src <- if (built_tables[["sources"]]) {
     as.data.frame(nanoparquet::read_parquet(nsr_table_path("sources", dir)))
   } else NULL
+  geo <- nsr_geography(dir)
   out <- do.call(rbind, lapply(reg, function(s) {
     row <- if (!is.null(src) && s$source_name %in% src$source_name) src[src$source_name == s$source_name, ] else NULL
+    wgs <- identical(s$region_system, "wgsrpd3")
     data.frame(
       source = s$source_name, coverage = s$coverage, licence = s$licence,
       built = !is.null(row),
       n_records = if (is.null(row)) NA_integer_ else as.integer(row$n_records),
       n_taxa = if (is.null(row)) NA_integer_ else as.integer(row$n_taxa),
       date_built = if (is.null(row)) NA_character_ else as.character(row$date_accessed),
+      answers_by_name = if (is.null(row)) NA else if (wgs) geo$links else TRUE,
+      answers_by_coordinates = if (is.null(row)) NA else if (wgs) geo$raster else geo$gadm_index,
       stringsAsFactors = FALSE
     )
   }))

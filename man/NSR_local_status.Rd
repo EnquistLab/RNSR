@@ -11,7 +11,13 @@ NSR_local_status(dir = nsr_cache_dir())
 }
 \value{
 A data.frame with one row per source: whether it is built, how many checklist
-  records and taxa it contributed, and when it was built.
+  records and taxa it contributed, and when it was built; and whether a query can
+  actually reach it - \code{answers_by_name} and \code{answers_by_coordinates}.  A
+  source can be built and still unreachable: WCVP's opinions are published against
+  WGSRPD areas, so names reach them only through the region link table and coordinates
+  only through the WGSRPD raster.  If either failed during the build, \code{built} is
+  \code{TRUE} and the corresponding column is \code{FALSE}; re-run
+  \code{NSR_local_build(overwrite = TRUE)} and read its warnings for the cause.
 }
 \description{
 Which parts of the local NSR are built
