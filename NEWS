@@ -4,6 +4,24 @@
 
 ## NEW FEATURES
 * Added new function to check native status using species name and coordinates (NSR_from_coordinates)
+* Added an offline implementation: NSR_local() answers without an internet connection from a
+  local cache built by NSR_local_build(), with NSR_local_status(), NSR_local_remove() and
+  NSR_local_by_region() alongside it.  The checklist sources are acquired on the user's
+  machine; nothing derived ships with the package.  The offline path needs data.table,
+  nanoparquet, terra, sf and TNRS, all of which are Suggests.
+* NSR_local() gains exclude_extinct (default TRUE).  WCVP flags a distribution extinct
+  without a date, so the cache keeps those records and the query decides: the default
+  answers about the present day, FALSE models a past distribution.  Either way a region
+  a taxon has been lost from stays part of its native range, so such a record is
+  reported absent rather than introduced.
+* NSR_local() answers from political division names by default.  Coordinates are
+  echoed but not used unless use_coordinates = TRUE: placing every record by point
+  costs a raster lookup per call, and turning coordinates into political divisions is
+  what GVS already does.
+* Where a record gives both coordinates and division names and the two resolve to
+  different places, NSR_local() no longer pools them.  Neither is treated as
+  authoritative: place_conflict flags the record, native_status is UNK, and the two
+  bases are answered separately in native_status_coordinates and native_status_names.
 
 ## Bug fixes
 
