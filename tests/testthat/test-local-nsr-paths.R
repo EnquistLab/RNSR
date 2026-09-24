@@ -271,3 +271,32 @@ test_that("a country counts as its own container for a confined range", {
   expect_equal(NSR:::nsr_resolve_status_set("t8", p, db)$code, "Ie")
   expect_match(NSR:::nsr_resolve_status("t8", p, db)$reason, "Canada")
 })
+
+# Knowing a genus is native to a region says nothing about which of its species are, so
+# a species with no opinion of its own is not given its genus's status.  The live service
+# does consult higher ranks; this is a deliberate divergence, pinned here so it cannot
+# drift back in. See dev_notes/01-offline-nsr-design.md, "Higher ranks are not consulted".
+test_that("a species does not inherit its genus's native status", {
+  chk <- data.frame(taxon_id = "g1", region_key = "wgsrpd3:QUE", status = "native",
+                    source_name = "wcvp", is_cultivated = 0L, is_extinct = 0L,
+                    stringsAsFactors = FALSE)
+  db <- NSR:::nsr_index_db(list(
+    sources = data.frame(source_name = "wcvp", is_comprehensive = TRUE,
+                         stringsAsFactors = FALSE),
+    taxa = data.frame(taxon_id = c("g1", "s1"), species_name = c("Gen", "Gen spec"),
+                      family = "Fam", genus = "Gen", rank = c("genus", "species"),
+                      stringsAsFactors = FALSE),
+    checklist = chk,
+    regions = data.frame(region_key = "wgsrpd3:QUE", region_name = "Quebec",
+                         level = "state_province", system = "wgsrpd3",
+                         stringsAsFactors = FALSE),
+    links = data.frame(from_region = character(0), to_region = character(0),
+                       relation = character(0), fraction = numeric(0),
+                       stringsAsFactors = FALSE)))
+  p <- list(fine = list("wgsrpd3:QUE"), country = list(character(0)))
+  # the genus answers when the genus is what was asked about
+  expect_equal(NSR:::nsr_resolve_status("g1", p, db)$code, "Ne")
+  # the species does not borrow it, and is not evaluable on the strength of it
+  expect_equal(NSR:::nsr_resolve_status("s1", p, db)$code, "UNK")
+  expect_false("s1" %in% db$evaluable)
+})

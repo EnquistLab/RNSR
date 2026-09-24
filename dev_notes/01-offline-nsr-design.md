@@ -37,7 +37,8 @@ division supplied.
 Propagation rules, from the service README:
 - **Taxonomic:** native propagates *up* (a native variety makes the species, genus and family native
   there); introduced propagates *down* (an introduced species makes its varieties introduced). With
-  no opinion for the taxon, higher ranks are consulted.
+  no opinion for the taxon, higher ranks are consulted. **We reproduce the first and decline the
+  last - see below.**
 - **Political:** native propagates *up* (native in a county implies native in its state and country);
   introduced propagates *down* (introduced in a country implies introduced in its states).
 - **Absence:** absent from a checklist gives `A`; absent while endemic elsewhere gives `Ie`.
@@ -225,8 +226,10 @@ while "introduced in Brazil Southeast" answers it as `I`. Nothing is invented an
 
 For each row, after name and division resolution:
 
-1. Gather every checklist opinion for the taxon (or a higher rank, per the taxonomic rule) in the
-   division (or a containing/contained one, per the political rule), from all built sources.
+1. Gather every checklist opinion for the taxon in the division (or a containing/contained one,
+   per the political rule), from all built sources. Opinions recorded against a taxon's own
+   infraspecifics are already part of it, having been rolled up at build time; opinions recorded
+   against a *higher* rank are not consulted (see "Higher ranks are not consulted", below).
 2. Reduce to one status per political level. **Precedence (BM, 2026-09-18): if any source says
    native, the taxon is native there.** Native is the hardest claim for a checklist to make by
    accident, whereas "introduced" and "absent" are often an artefact of a list's scope or age. Where
@@ -451,6 +454,33 @@ sub-region's status upward; we decline to, and say so. For records with coordina
 in the garden pipeline - the two approaches coincide, because the point lies inside exactly one
 polygon per system.
 
+### Higher ranks are not consulted (BM, 2026-09-24)
+
+The service's taxonomic rule has two halves and they are not the same claim.
+
+Upward is sound and **is** implemented, at build time in `nsr_species_of()`: a distribution recorded
+against an accepted infraspecific taxon is rolled up to its species, because a subspecies of *X*
+occurring natively in a region means *X* occurs natively in that region. The subspecies is an *X*.
+Roughly 60k WCVP distribution rows hang off infraspecifics and reach the species this way.
+
+Downward from a higher rank is **not** implemented, and deliberately. "With no opinion for the
+taxon, higher ranks are consulted" means answering about a species from its genus's range, and
+knowing that a genus is native to a region tells us nothing about any particular species in it:
+that is inferring a property of a part from a property of the whole - the ecological fallacy, in
+its division form. A genus native to Quebec means *some* species of it is native to Quebec, and the
+species in hand is as likely to be the introduced one. Native is the strongest claim the resolver
+can make, and making it at genus level would manufacture it at scale for exactly the taxa about
+which the sources are silent.
+
+So a species with no opinion of its own is `UNK` (or `A` where a comprehensive source covers the
+place), never native-by-genus. `taxon_evaluable` says which it is. A genus *query* is still answered
+directly, because WCVP records distributions against genera and those rows are kept keyed on the
+genus - that is answering the question asked, not inferring downward from it.
+
+**This is a known and permanent divergence from the service**, and belongs with the `wcvp`/`powo`
+source-name difference in any validation against `NSR()`: where the live service returns a
+genus-derived status for an unlisted species, we return `UNK` or `A`.
+
 ## Milestones
 
 1. Cache scaffolding, `nsr-sources`, and the POWO importer from WCVP (no download); `NSR_local()`
@@ -458,8 +488,9 @@ polygon per system.
    country-level rows.
 2. USDA, VASCAN and Flora do Brasil importers, with the state-level resolution and the political
    propagation rules.
-3. The taxonomic propagation rules, endemism (`Ie`) and conflict handling. (`is_cultivated_taxon`
-   was dropped - see open question 3.)
+3. Taxonomic roll-up of infraspecifics, endemism (`Ie`) and conflict handling. (`is_cultivated_taxon`
+   was dropped - see open question 3; consulting higher ranks was declined - see "Higher ranks are
+   not consulted".)
 4. Validation 1-3; write-up.
 5. Garden re-run (validation 4) and, separately, the remaining eight sources.
 

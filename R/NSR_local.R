@@ -40,6 +40,16 @@
 #' a list's scope, age or purpose.  Disagreement is recorded, not hidden, in
 #' \code{native_status_conflict} and \code{native_status_opinions}.
 #'
+#' \strong{Rank.}  A distribution recorded against an accepted infraspecific taxon counts
+#' for its species: a subspecies of \emph{X} native somewhere means \emph{X} is native
+#' there.  The reverse is not done.  A species with no opinion of its own is not given its
+#' genus's status, because a genus being native to a region says nothing about which of its
+#' species are - it is the introduced one as readily as the native one.  Such a species is
+#' \code{UNK}, or \code{A} where a comprehensive source covers the place;
+#' \code{taxon_evaluable} distinguishes them.  A genus \emph{query} is still answered
+#' directly, from the distributions WCVP records against genera.  \code{\link{NSR}} does
+#' consult higher ranks, so the two differ here by design.
+#'
 #' \strong{Which polygons answer.}  A place is judged by the polygons it lies IN.  An
 #' opinion about a polygon containing the place applies to it (POWO's finest statement
 #' about Guadeloupe is "native in the Leeward Islands"), and among those any native
