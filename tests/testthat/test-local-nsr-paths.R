@@ -300,3 +300,19 @@ test_that("a species does not inherit its genus's native status", {
   expect_equal(NSR:::nsr_resolve_status("s1", p, db)$code, "UNK")
   expect_false("s1" %in% db$evaluable)
 })
+
+test_that("a sibling state's coverage says nothing about this one", {
+  skip_if_not_installed("data.table")
+  db <- fixture_db()
+  # take away the country-level row, so Canada as a whole is not listed - only some of
+  # its states are.  CAN.9_1 has no coverage of its own, and Quebec's comprehensive
+  # list is not evidence about it, so absence there is not interpretable
+  chk <- db$checklist[db$checklist$region_key != "gadm0:CAN", ]
+  db <- NSR:::nsr_index_db(list(sources = db$sources, taxa = db$taxa, checklist = chk,
+                                regions = db$regions, links = db$links))
+  expect_false("gadm0:CAN" %in% db$covered)
+  expect_true("gadm1:CAN.11_1" %in% db$covered)
+  p <- list(fine = list("gadm1:CAN.9_1"), country = list("gadm0:CAN"))
+  expect_equal(NSR:::nsr_resolve_status("t3", p, db)$code, "UNK")
+  expect_equal(NSR:::nsr_resolve_status_set("t3", p, db)$code, "UNK")
+})

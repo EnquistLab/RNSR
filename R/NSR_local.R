@@ -464,10 +464,13 @@ nsr_resolve_status <- function(taxon_id, places, db, min_overlap = 0.01,
         op <- if (is.null(op)) add else Map(c, op, add)
       }
     }
-    # the ancestor country supplies opinions above, so absence has to be read against it
-    # too, or a state with no coverage of its own inside a comprehensively listed country
-    # answers UNK here and A in the set path, which reads Q's country row
-    consulted <- nsr_consulted_regions(c(keys, anc), db, min_overlap)
+    # The ancestor country supplies opinions above, so absence is read against it too:
+    # a comprehensive list for the whole country that omits the taxon says it is absent
+    # from every part of that country.  The country key itself, NOT its expansion - the
+    # expansion reaches its other states, and a comprehensive list for Quebec says
+    # nothing about Saskatchewan.  This matches the set path, whose Q holds the country
+    # row but follows links and children only from the query's own polygons.
+    consulted <- unique(c(nsr_consulted_regions(keys, db, min_overlap), anc))
     ev <- tid %in% db$evaluable
     r <- nsr_reduce(op, consulted, ev, db)
     if (identical(r$code, "N") && nsr_is_endemic(tid, keys, db, min_overlap)) {

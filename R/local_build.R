@@ -35,11 +35,10 @@
 NSR_local_build <- function(sources = "wcvp",
                             dir = nsr_cache_dir(create = TRUE),
                             files = list(), overwrite = FALSE, quiet = FALSE) {
-  for (pkg in c("nanoparquet", "TNRS")) {
-    if (!requireNamespace(pkg, quietly = TRUE)) {
-      stop("Building the local NSR needs the '", pkg, "' package.", call. = FALSE)
-    }
-  }
+  # TNRS is needed only to resolve checklist names that arrive without a WCVP id, which
+  # WCVP's own rows never do - so a wcvp-only build must not require it.
+  # nsr_resolve_names() checks for it at the point it is actually used.
+  nsr_need("nanoparquet", what = "Building the local NSR")
   reg <- nsr_builtin_registry()
   sources <- match.arg(nsr_canonical_source(sources), names(reg), several.ok = TRUE)
   if (length(files)) names(files) <- nsr_canonical_source(names(files))
@@ -270,6 +269,7 @@ nsr_match_poldiv <- function(country, state = NULL, bb) {
 #' @keywords internal
 #' @noRd
 nsr_resolve_names <- function(names_in, quiet = FALSE, species_index = NULL) {
+  nsr_need("TNRS", what = "Resolving names against WCVP")
   r <- TNRS::TNRS_local(taxonomic_names = names_in, sources = "wcvp", matches = "best",
                         build_missing = FALSE, quiet = quiet)
   acc <- r$Accepted_species
