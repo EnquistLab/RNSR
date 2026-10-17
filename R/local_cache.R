@@ -144,20 +144,34 @@ nsr_builtin_registry <- function() {
 nsr_geography <- function(dir) {
   list(raster = nsr_has_wgsrpd_raster(dir),
        links = file.exists(nsr_table_path("region-links", dir)),
-       gadm_index = nsr_has_gadm_index(dir))
+       gadm_index = nsr_has_gadm_index(dir),
+       backbone = nsr_has_gnrs_backbone(dir))
+}
+
+#' Are the GNRS backbone tables, which turn division names into GADM keys, in the cache?
+#'
+#' Internal.  Every name query starts there, whatever geography the source publishes
+#' against.  The build requires them, but a shared cache can lose them afterwards, and
+#' \code{nsr_query_regions()} then quietly produces no place at all.
+#' @keywords internal
+#' @noRd
+nsr_has_gnrs_backbone <- function(dir) {
+  all(file.exists(file.path(dir, paste0("gnrs-", c("country", "state_province"), ".gz.parquet"))))
 }
 
 #' How a query reaches the opinions published against one geography
 #'
 #' Internal.  The single rule \code{NSR_local_status()} reports and \code{NSR_local()}
-#' warns by, so the two cannot disagree.  By name: GADM directly, WGSRPD only through the
-#' link table.  By coordinates: \code{"direct"} when the point is placed in that geography
+#' warns by, so the two cannot disagree.  By name: only with the GNRS backbone, which
+#' turns names into GADM keys; then GADM directly, and WGSRPD only through the link table.  By coordinates: \code{"direct"} when the point is placed in that geography
 #' by its own raster; \code{"crosswalk"} when it is placed only in the other geography and
 #' carried over by the link table - the route a division name takes, and no more precise
 #' than one; \code{"none"} otherwise.  Any system but \code{"wgsrpd3"} is treated as GADM.
 #' @keywords internal
 #' @noRd
-nsr_name_reach <- function(system, geo) if (identical(system, "wgsrpd3")) geo$links else TRUE
+nsr_name_reach <- function(system, geo) {
+  isTRUE(geo$backbone) && (if (identical(system, "wgsrpd3")) geo$links else TRUE)
+}
 
 #' @keywords internal
 #' @noRd

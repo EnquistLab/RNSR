@@ -152,7 +152,9 @@ NSR_local <- function(occurrence_dataframe, dir = nsr_cache_dir(), resolve_names
     why <- if (sys == "wgsrpd3") "the WGSRPD raster is missing" else
       "GVS's GADM index is missing or incomplete"
     if (!nsr_name_reach(sys, geo)) {
-      lost <- c(lost, paste0(what, " by division name (the region link table is missing)"))
+      cause <- if (!isTRUE(geo$backbone)) "the GNRS backbone is missing" else
+        "the region link table is missing"
+      lost <- c(lost, paste0(what, " by division name (", cause, ")"))
     }
     if (use_coordinates) {
       r <- nsr_coordinate_reach(sys, geo)

@@ -20,6 +20,14 @@ broken_cache <- function() {
   w(data.frame(taxon_id = "t1", region_key = "wgsrpd3:QUE", status = "native",
                is_cultivated = 0L, is_extinct = 0L, source_name = "wcvp",
                stringsAsFactors = FALSE), "checklist")
+  # the GNRS backbone, as GNRS writes it to the shared cache: Canada, and Quebec
+  g <- function(x, t) nanoparquet::write_parquet(x, file.path(dir, paste0("gnrs-", t, ".gz.parquet")),
+                                                 compression = "gzip")
+  g(data.frame(country_id = 1L, country = "Canada", gid_0 = "CAN", iso = "CA",
+               stringsAsFactors = FALSE), "country")
+  g(data.frame(state_province_id = 10L, country_id = 1L, country = "Canada",
+               state_province = "Quebec", state_province_std = "Quebec", hasc_full = "CA.QC",
+               gid_1 = "CAN.11_1", stringsAsFactors = FALSE), "state_province")
   dir
 }
 # the once-per-session memory lives in an environment, so it is reset through a reference
@@ -62,8 +70,25 @@ test_that("a cache with its link table is not warned about", {
                fraction = 0.99, stringsAsFactors = FALSE),
     file.path(dir, "nsr-region-links.gz.parquet"), compression = "gzip")
   forget_warnings()
-  expect_no_warning(NSR_local(query, dir = dir, resolve_names = FALSE, quiet = TRUE))
+  r <- expect_no_warning(NSR_local(query, dir = dir, resolve_names = FALSE, quiet = TRUE))
   expect_true(NSR_local_status(dir)$answers_by_name[1])
+  # and does answer: Quebec by name -> GADM -> the link -> WCVP's QUE, t1's only native area
+  expect_equal(r$native_status, "Ne")
+  expect_equal(r$regions_matched, "names")
+})
+
+test_that("without the GNRS backbone, names reach nothing, and status says so", {
+  dir <- broken_cache()
+  nanoparquet::write_parquet(
+    data.frame(from_region = "gadm1:CAN.11_1", to_region = "wgsrpd3:QUE", relation = "same",
+               fraction = 0.99, stringsAsFactors = FALSE),
+    file.path(dir, "nsr-region-links.gz.parquet"), compression = "gzip")
+  file.remove(file.path(dir, c("gnrs-country.gz.parquet", "gnrs-state_province.gz.parquet")))
+  expect_false(NSR_local_status(dir)$answers_by_name[1])
+  forget_warnings()
+  expect_warning(r <- NSR_local(query, dir = dir, resolve_names = FALSE, quiet = TRUE),
+                 "GNRS backbone is missing")
+  expect_equal(r$native_status, "UNK")
 })
 
 # GVS's GADM index is one thing in two files: the raster of unit numbers and the table
@@ -96,7 +121,11 @@ test_that("a crosswalked route is reported as one, not as unreachable", {
     data.frame(from_region = "gadm1:CAN.11_1", to_region = "wgsrpd3:QUE", relation = "same",
                fraction = 0.99, stringsAsFactors = FALSE),
     file.path(dir, "nsr-region-links.gz.parquet"), compression = "gzip")
+  # Placeholders: only their existence is read here.  The query below carries no
+  # coordinates, so nsr_locate_regions() never opens them - this test is about what status
+  # and the warning SAY.  A real point through a real raster is tested further down.
   file.create(file.path(dir, c("gadmindex-units-30s.tif", "gadmindex-units.gz.parquet")))
+  expect_false(any(c("latitude", "longitude") %in% names(query)))
   w <- NSR_local_status(dir)[1, ]
   expect_true(w$answers_by_coordinates)
   expect_equal(w$coordinate_route, "crosswalk")
