@@ -37,8 +37,8 @@ division supplied.
 Propagation rules, from the service README:
 - **Taxonomic:** native propagates *up* (a native variety makes the species, genus and family native
   there); introduced propagates *down* (an introduced species makes its varieties introduced). With
-  no opinion for the taxon, higher ranks are consulted. **We reproduce the first and decline the
-  last - see below.**
+  no opinion for the taxon, higher ranks are consulted. **The service's code implements less of
+  this than its README says - see "What the service's code does", below.**
 - **Political:** native propagates *up* (native in a county implies native in its state and country);
   introduced propagates *down* (introduced in a country implies introduced in its states).
 - **Absence:** absent from a checklist gives `A`; absent while endemic elsewhere gives `Ie`.
@@ -477,9 +477,55 @@ place), never native-by-genus. `taxon_evaluable` says which it is. A genus *quer
 directly, because WCVP records distributions against genera and those rows are kept keyed on the
 genus - that is answering the question asked, not inferring downward from it.
 
-**This is a known and permanent divergence from the service**, and belongs with the `wcvp`/`powo`
-source-name difference in any validation against `NSR()`: where the live service returns a
-genus-derived status for an unlisted species, we return `UNK` or `A`.
+This was first recorded here as a permanent divergence from the service. **It is not one**
+(corrected 2026-10-17): the README says the service consults higher ranks, but its code never gives
+a species its genus's status, and never native. On native-by-genus the two agree. The difference
+that does exist runs the other way - the service uses higher ranks for endemism, and we do not yet;
+see the next two sections.
+
+### What the service's code does (checked 2026-10-17)
+
+The README overstates the taxonomic rules. Read against `ojalaquellueva/nsr` (`master`): the
+resolver runs `nsr_includes/check_absence.php`, then `check_presence.php`, then `infer_status.php`,
+and the database build lives in `db/` (`nsr_db` is now `nsr_db_retired`).
+
+- **Names are matched as submitted.** `prepare_observations.php` keeps the submitted name in
+  `species`, fills `genus` with its first word and `family` from a genus-to-family lookup, and
+  never trims a trinomial to its species. Every status join is `o.species = d.taxon`.
+- **So there is no taxonomic propagation in either direction**: not the README's own *Poa annua*
+  var. *supina* -> *Poa annua* -> *Poa* walk, and no "introduced" from a genus or family. A search
+  of the resolver and the build for joins on genus or family finds only the endemism steps, the
+  reason text, and the name splitting.
+- **Higher ranks are used for endemism only.** A genus or family listed as endemic to another
+  region makes the species `Ie` ("Introduced, genus endemic to other region"); endemic to this
+  region, `Ne`.
+- **Political propagation is as described**: native in a county sets its state and country native;
+  introduced in a country sets its states introduced.
+- **Precedence is the reverse of ours.** The introduced step runs last and, in its own comment,
+  "automatically prefers a designation of introduced over a designation of native". `NSR_local()`
+  lets native win (BM, 2026-09-18), so the two can differ wherever sources conflict.
+- `nsr_includes/check_observations.php` is marked "UNDER DEVELOPMENT" and nothing includes it.
+
+### Deferred: two sound downward inferences (BM, 2026-10-17)
+
+Native-by-genus is declined because "a genus is native here" is existential - *some* species of it
+is - and says nothing about the species in hand. Two claims about a higher taxon are universal
+instead, true of every species in it, and so they do carry down:
+
+1. **Genus or family introduced here -> species introduced here**, for a species with no record of
+   its own in the place. In WCVP v15, 51,473 genus x area records are introduced, across 2,833
+   genera (409 in California - *Acacia*, *Aegilops*, *Acanthus*, ...). In none of those areas does
+   any species of the genus have a native record: all 71,740 species records there are introduced.
+   So in this data "genus introduced here" is exactly the universal claim, and the inference can
+   only answer where a species is silent, never overturn a native record. Such a species is `A`
+   today (or `UNK` if it has no record anywhere); it would be `I`. The service does not do this,
+   so it would go beyond `NSR()`.
+2. **Genus or family endemic elsewhere -> species `Ie`**, as the service does. In WCVP, 2,500 of
+   14,056 genera are native to a single WGSRPD area.
+
+**To be implemented once the open Copilot review on PR #1 is resolved**, in both resolver paths,
+with the row/set parity tests extended to cover them and the reason text naming the higher taxon
+that answered, as the service's does.
 
 ## Milestones
 

@@ -237,5 +237,5 @@
   </g>
 
   <text class="b21" x="1000" y="1544" text-anchor="middle" xml:space="preserve"><tspan font-weight="700">N</tspan> native   <tspan font-weight="700">Ne</tspan> native, endemic   <tspan font-weight="700">I</tspan> introduced   <tspan font-weight="700">Ie</tspan> introduced, inferred   <tspan font-weight="700">P</tspan> present   <tspan font-weight="700">A</tspan> absent   <tspan font-weight="700">UNK</tspan> no data</text>
-  <text x="1000" y="1594" font-size="20" font-style="italic" fill="#444" text-anchor="middle">Deliberate differences from NSR(): no genus → species inference · county not resolved · coordinates and names never pooled · WCVP reported as wcvp</text>
+  <text x="1000" y="1594" font-size="19" font-style="italic" fill="#444" text-anchor="middle">Differences from NSR(): native wins where NSR() lets introduced win · genus and family endemism not yet used · county not resolved · coordinates and names never pooled · WCVP reported as wcvp</text>
 </svg>

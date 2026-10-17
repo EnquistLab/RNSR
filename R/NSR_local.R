@@ -50,8 +50,10 @@
 #' species are - it is the introduced one as readily as the native one.  Such a species is
 #' \code{UNK}, or \code{A} where a comprehensive source covers the place;
 #' \code{taxon_evaluable} distinguishes them.  A genus \emph{query} is still answered
-#' directly, from the distributions WCVP records against genera.  \code{\link{NSR}} does
-#' consult higher ranks, so the two differ here by design.
+#' directly, from the distributions WCVP records against genera.  The live service does not
+#' give a species its genus's status either: it uses higher ranks only for endemism, where a
+#' genus or family endemic elsewhere makes a species \code{Ie} - which \code{NSR_local()}
+#' does not yet do.
 #'
 #' \strong{Which polygons answer.}  A place is judged by the polygons it lies IN.  An
 #' opinion about a polygon containing the place applies to it (POWO's finest statement

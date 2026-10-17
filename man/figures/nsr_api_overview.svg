@@ -178,16 +178,15 @@
   <rect x="1012" y="720" width="474" height="475" rx="14" fill="none" stroke="#4e9a4e" stroke-width="3"/>
   <text class="h25 cgreen" x="1032" y="758">Resolve on server</text>
   <text class="mono tag" x="1468" y="757" text-anchor="end">(server)</text>
-  <text class="b21" x="1034" y="812">• Taxon and divisions looked up in
-    <tspan x="1056" dy="31">the checklists as written</tspan>
-    <tspan x="1034" dy="31">• Native moves up: variety → species,</tspan>
-    <tspan x="1056" dy="31">county → state → country</tspan>
-    <tspan x="1034" dy="31">• Introduced moves down: species →</tspan>
-    <tspan x="1056" dy="31">varieties, country → its states</tspan>
-    <tspan x="1034" dy="31">• Not on the region's list: higher</tspan>
-    <tspan x="1056" dy="31">taxa checked for "introduced"</tspan>
-    <tspan x="1034" dy="31">• Endemic to a non-overlapping region</tspan>
-    <tspan x="1056" dy="31">→ Ie; on none of the region's lists → A</tspan></text>
+  <text class="b21" x="1034" y="812">• Names matched as written: no
+    <tspan x="1056" dy="31">taxonomic propagation either way</tspan>
+    <tspan x="1034" dy="31">• Native moves up: county → state</tspan>
+    <tspan x="1056" dy="31">→ country</tspan>
+    <tspan x="1034" dy="31">• Introduced moves down: country →</tspan>
+    <tspan x="1056" dy="31">its states, and wins over native</tspan>
+    <tspan x="1034" dy="31">• Species, genus or family endemic</tspan>
+    <tspan x="1056" dy="31">elsewhere → Ie; endemic here → Ne</tspan>
+    <tspan x="1034" dy="31">• On none of the region's lists → A</tspan></text>
   <rect x="1030" y="1118" width="438" height="58" rx="8" fill="#d6ead3"/>
   <text class="cgreen" x="1249" y="1154" font-size="21" font-weight="700" text-anchor="middle">Status at the lowest division given</text>
 
@@ -207,7 +206,7 @@
   <rect x="1528" y="1118" width="438" height="58" rx="8" fill="#f6e3c2"/>
   <text class="corange" x="1747" y="1154" font-size="21" font-weight="700" text-anchor="middle">Returned in the order sent</text>
 
-  <text x="1000" y="1236" font-size="20" font-style="italic" fill="#555" text-anchor="middle">Steps 1, 2 and 4 run in R on your machine; step 3 runs on the NSR server and cannot be inspected from the package</text>
+  <text x="1000" y="1236" font-size="20" font-style="italic" fill="#555" text-anchor="middle">Steps 1, 2 and 4 run in R on your machine; step 3 runs on the NSR server, drawn here from its code where that differs from its README</text>
 
   <!-- ============================== row 5: output ============================== -->
   <rect x="16" y="1262" width="1968" height="400" rx="14" fill="#ffffff"/>
