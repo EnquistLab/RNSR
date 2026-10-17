@@ -208,19 +208,21 @@ NSR_local_status <- function(dir = nsr_cache_dir()) {
   geo <- nsr_geography(dir)
   out <- do.call(rbind, lapply(reg, function(s) {
     row <- if (!is.null(src) && s$source_name %in% src$source_name) src[src$source_name == s$source_name, ] else NULL
+    # built means the query path can load it: a source row in nsr-sources is not enough
+    # if an interrupted build left another required table missing, which nsr_local_db()
+    # would refuse
+    ok <- !is.null(row) && all(built_tables)
     data.frame(
       source = s$source_name, coverage = s$coverage, licence = s$licence,
-      # built means the query path can load it: a source row in nsr-sources is not
-      # enough if an interrupted build left another required table missing, which
-      # nsr_local_db() would refuse
-      built = !is.null(row) && all(built_tables),
+      built = ok,
       n_records = if (is.null(row)) NA_integer_ else as.integer(row$n_records),
       n_taxa = if (is.null(row)) NA_integer_ else as.integer(row$n_taxa),
       date_built = if (is.null(row)) NA_character_ else as.character(row$date_accessed),
-      answers_by_name = if (is.null(row)) NA else nsr_name_reach(s$region_system, geo),
-      answers_by_coordinates = if (is.null(row)) NA else
+      # reach is only meaningful for a source the query path can load at all
+      answers_by_name = if (!ok) NA else nsr_name_reach(s$region_system, geo),
+      answers_by_coordinates = if (!ok) NA else
         nsr_coordinate_reach(s$region_system, geo) != "none",
-      coordinate_route = if (is.null(row)) NA_character_ else
+      coordinate_route = if (!ok) NA_character_ else
         nsr_coordinate_reach(s$region_system, geo),
       stringsAsFactors = FALSE
     )

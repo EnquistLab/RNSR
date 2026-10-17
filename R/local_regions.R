@@ -119,8 +119,20 @@ nsr_build_region_links <- function(dir = nsr_cache_dir(), gadm_raster = NULL, bl
   cells <- vapply(keys, function(k) acc[[k]], integer(1))
   d <- data.frame(w_unit = as.integer(parts[, 1]), g_unit = as.integer(parts[, 2]),
                   cells = as.integer(cells), stringsAsFactors = FALSE)
-  d$w_key <- paste0("wgsrpd3:", widx$area_code_l3[match(d$w_unit, widx$unit)])
+  # A unit missing from its index - the raster and table from different builds - has no
+  # region to name; pasting its NA code would key a link to "wgsrpd3:NA" or "gadm0:NA".
+  wi <- match(d$w_unit, widx$unit)
   gi <- match(d$g_unit, units$unit)
+  keep <- !is.na(wi) & !is.na(gi)
+  if (!all(keep)) {
+    warning(sum(!keep), " raster cell group(s) carry units missing from their index and are ",
+            "left out of the link table; the raster and its index may be from different builds.",
+            call. = FALSE)
+  }
+  d <- d[keep, , drop = FALSE]
+  wi <- wi[keep]
+  gi <- gi[keep]
+  d$w_key <- paste0("wgsrpd3:", widx$area_code_l3[wi])
   d$g_key <- ifelse(!is.na(units$gid_1[gi]), paste0("gadm1:", units$gid_1[gi]),
                     paste0("gadm0:", units$gid_0[gi]))
   # A query about a country must find links too, so the level-0 pairs are built as well -
@@ -212,8 +224,9 @@ nsr_locate_regions <- function(longitude, latitude, dir = nsr_cache_dir()) {
   if (nsr_has_wgsrpd_raster(dir)) {
     widx <- as.data.frame(nanoparquet::read_parquet(nsr_raster_path("wgsrpd3_index", dir)))
     u <- as.integer(terra::extract(terra::rast(wf), xy)[, 1])
-    out$wgsrpd3[ok] <- ifelse(is.na(u) | u == 0, NA_character_,
-                              paste0("wgsrpd3:", widx$area_code_l3[match(u, widx$unit)]))
+    wi <- match(u, widx$unit)    # NA for nodata, 0, and any unit the index does not hold
+    out$wgsrpd3[ok] <- ifelse(is.na(wi), NA_character_,
+                              paste0("wgsrpd3:", widx$area_code_l3[wi]))
   }
   gi <- nsr_gadm_index(dir)
   if (nsr_has_gadm_index(dir)) {

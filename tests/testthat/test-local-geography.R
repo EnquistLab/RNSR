@@ -156,3 +156,26 @@ test_that("a point placed only by the WGSRPD raster is matched on coordinates", 
   # and the point does reach WCVP directly: t1 is native in QUE and nowhere else
   expect_equal(r$native_status, "Ne")
 })
+
+test_that("a raster unit the index cannot decode leaves the point unplaced", {
+  skip_if_not_installed("terra")
+  dir <- broken_cache()
+  r <- terra::rast(terra::ext(-72, -70, 46, 48), nrows = 1, ncols = 1, crs = "EPSG:4326")
+  terra::values(r) <- 2L                         # the index below only knows unit 1
+  terra::writeRaster(r, NSR:::nsr_raster_path("wgsrpd3", dir), overwrite = TRUE)
+  nanoparquet::write_parquet(
+    data.frame(unit = 1L, area_code_l3 = "QUE", area_name = "Quebec", stringsAsFactors = FALSE),
+    NSR:::nsr_raster_path("wgsrpd3_index", dir), compression = "gzip")
+  loc <- NSR:::nsr_locate_regions(-71.2, 46.8, dir)
+  expect_true(is.na(loc$wgsrpd3))                # not "wgsrpd3:NA"
+})
+
+test_that("an incomplete cache reports no reach either way", {
+  dir <- broken_cache()
+  file.remove(file.path(dir, "nsr-checklist.gz.parquet"))
+  s <- NSR_local_status(dir)[1, ]
+  expect_false(s$built)
+  expect_true(is.na(s$answers_by_name))
+  expect_true(is.na(s$answers_by_coordinates))
+  expect_true(is.na(s$coordinate_route))
+})
