@@ -136,3 +136,23 @@ test_that("a source is built only if every table the query path loads is there",
   file.remove(file.path(dir, "nsr-checklist.gz.parquet"))
   expect_false(NSR_local_status(dir)$built[1])
 })
+
+test_that("a point placed only by the WGSRPD raster is matched on coordinates", {
+  skip_if_not_installed("terra")
+  dir <- broken_cache()
+  r <- terra::rast(terra::ext(-72, -70, 46, 48), nrows = 1, ncols = 1, crs = "EPSG:4326")
+  terra::values(r) <- 1L
+  terra::writeRaster(r, NSR:::nsr_raster_path("wgsrpd3", dir), overwrite = TRUE)
+  nanoparquet::write_parquet(
+    data.frame(unit = 1L, area_code_l3 = "QUE", area_name = "Quebec", stringsAsFactors = FALSE),
+    NSR:::nsr_raster_path("wgsrpd3_index", dir), compression = "gzip")
+  expect_false(NSR:::nsr_has_gadm_index(dir))
+  pt <- data.frame(species = "Sp one", latitude = 46.8, longitude = -71.2,
+                   stringsAsFactors = FALSE)
+  forget_warnings()
+  r <- suppressWarnings(   # the cache has no link table, which is warned about elsewhere
+    NSR_local(pt, dir = dir, resolve_names = FALSE, quiet = TRUE, use_coordinates = TRUE))
+  expect_equal(r$regions_matched, "coordinates")
+  # and the point does reach WCVP directly: t1 is native in QUE and nowhere else
+  expect_equal(r$native_status, "Ne")
+})

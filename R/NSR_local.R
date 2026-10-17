@@ -422,8 +422,10 @@ nsr_query_regions <- function(lon, lat, country, state, county, dir, db,
     direct[[i]] <- keys
     has_state <- any(grepl("^gadm1:", keys)) || (!is.null(pd) && !is.na(pd$state_province_id[i]))
     level[i] <- if (has_state) "state_province" else "country"
+    # matched on coordinates whenever the point placed the record anywhere - in WGSRPD
+    # as much as in GADM, since either raster can be the only one the cache has
     matched[i] <- if (!length(keys)) "none" else if (conflict[i]) "conflict" else
-      if (!is.null(loc) && !is.na(loc$gadm[i])) "coordinates" else "names"
+      if (length(kx)) "coordinates" else "names"
     label[i] <- paste(stats::na.omit(c(country[i], if (!is.na(state[i]) && nzchar(state[i])) state[i])),
                       collapse = ":")
     if (!nzchar(label[i]) && length(keys)) label[i] <- paste(keys, collapse = " + ")
