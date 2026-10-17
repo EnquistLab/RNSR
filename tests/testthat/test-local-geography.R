@@ -110,3 +110,29 @@ test_that("a crosswalked route is reported as one, not as unreachable", {
     warning = conditionMessage)
   expect_false(grepl("will be UNK", msg))
 })
+
+# The WGSRPD raster is a pair as well: nsr_build_wgsrpd_raster() writes the index, then the
+# raster, so an interrupted build can leave either alone.
+test_that("the WGSRPD raster counts only with its index", {
+  dir <- broken_cache()
+  file.create(NSR:::nsr_raster_path("wgsrpd3", dir))
+  expect_false(NSR:::nsr_has_wgsrpd_raster(dir))
+  expect_false(NSR:::nsr_geography(dir)$raster)
+  file.create(NSR:::nsr_raster_path("wgsrpd3_index", dir))
+  expect_true(NSR:::nsr_has_wgsrpd_raster(dir))
+})
+
+test_that("a raster without its index places nothing, rather than failing the query", {
+  skip_if_not_installed("terra")
+  dir <- broken_cache()
+  file.create(NSR:::nsr_raster_path("wgsrpd3", dir))   # no index beside it
+  loc <- NSR:::nsr_locate_regions(-71.2, 46.8, dir)
+  expect_true(is.na(loc$wgsrpd3))
+})
+
+test_that("a source is built only if every table the query path loads is there", {
+  dir <- broken_cache()
+  expect_true(NSR_local_status(dir)$built[1])
+  file.remove(file.path(dir, "nsr-checklist.gz.parquet"))
+  expect_false(NSR_local_status(dir)$built[1])
+})

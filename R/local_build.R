@@ -161,7 +161,7 @@ NSR_local_build <- function(sources = "wcvp",
   # geography to link it to.  A wcvp-only build needs it just as much.
   systems <- unique(regions$system)
   raster_ok <- TRUE
-  if ("wgsrpd3" %in% systems && !file.exists(nsr_raster_path("wgsrpd3", dir))) {
+  if ("wgsrpd3" %in% systems && !nsr_has_wgsrpd_raster(dir)) {
     msg("Building the WGSRPD level-3 raster ...")
     r <- try(nsr_build_wgsrpd_raster(dir = dir, quiet = quiet), silent = TRUE)
     raster_ok <- !inherits(r, "try-error")

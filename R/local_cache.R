@@ -142,8 +142,7 @@ nsr_builtin_registry <- function() {
 #' @keywords internal
 #' @noRd
 nsr_geography <- function(dir) {
-  list(raster = file.exists(nsr_raster_path("wgsrpd3", dir)) &&
-                file.exists(nsr_raster_path("wgsrpd3_index", dir)),
+  list(raster = nsr_has_wgsrpd_raster(dir),
        links = file.exists(nsr_table_path("region-links", dir)),
        gadm_index = nsr_has_gadm_index(dir))
 }
@@ -211,7 +210,10 @@ NSR_local_status <- function(dir = nsr_cache_dir()) {
     row <- if (!is.null(src) && s$source_name %in% src$source_name) src[src$source_name == s$source_name, ] else NULL
     data.frame(
       source = s$source_name, coverage = s$coverage, licence = s$licence,
-      built = !is.null(row),
+      # built means the query path can load it: a source row in nsr-sources is not
+      # enough if an interrupted build left another required table missing, which
+      # nsr_local_db() would refuse
+      built = !is.null(row) && all(built_tables),
       n_records = if (is.null(row)) NA_integer_ else as.integer(row$n_records),
       n_taxa = if (is.null(row)) NA_integer_ else as.integer(row$n_taxa),
       date_built = if (is.null(row)) NA_character_ else as.character(row$date_accessed),

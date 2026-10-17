@@ -1,5 +1,8 @@
 context("divisions that belong to another division system")
 
+# the fixtures are written with nanoparquet, a Suggests; without it there is nothing to test
+skip_if_not_installed("nanoparquet")
+
 # Self-contained: the tables GNRS writes to the shared cache, in a temp directory.
 
 dir <- file.path(tempdir(), "nsr-altdiv")

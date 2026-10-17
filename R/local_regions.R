@@ -82,7 +82,7 @@ nsr_build_region_links <- function(dir = nsr_cache_dir(), gadm_raster = NULL, bl
          "Build it with GVS (GVS_local_build(\"index\")); NSR reuses it rather than making its own.",
          call. = FALSE)
   }
-  if (!file.exists(nsr_raster_path("wgsrpd3", dir))) nsr_build_wgsrpd_raster(dir, quiet = quiet)
+  if (!nsr_has_wgsrpd_raster(dir)) nsr_build_wgsrpd_raster(dir, quiet = quiet)
 
   w <- terra::rast(nsr_raster_path("wgsrpd3", dir))
   g <- terra::rast(gadm_raster)
@@ -164,6 +164,18 @@ nsr_build_region_links <- function(dir = nsr_cache_dir(), gadm_raster = NULL, bl
   invisible(links)
 }
 
+#' Is the WGSRPD raster usable - the raster and the index that decodes it, both?
+#'
+#' Internal.  Same shape as the GADM index: \code{nsr_build_wgsrpd_raster()} writes the
+#' index first and the raster second, so an interrupted build can leave either one alone,
+#' and every reader needs both.  Checking the raster by itself let a half-written pair
+#' pass, so a rebuild skipped it and every query failed reading the missing index.
+#' @keywords internal
+#' @noRd
+nsr_has_wgsrpd_raster <- function(dir) {
+  file.exists(nsr_raster_path("wgsrpd3", dir)) && file.exists(nsr_raster_path("wgsrpd3_index", dir))
+}
+
 #' GVS's GADM unit index: a raster of unit numbers and the table that decodes them
 #'
 #' Internal.  One thing in two files, so they are only ever checked together: a shared
@@ -197,7 +209,7 @@ nsr_locate_regions <- function(longitude, latitude, dir = nsr_cache_dir()) {
   xy <- cbind(longitude[ok], latitude[ok])
 
   wf <- nsr_raster_path("wgsrpd3", dir)
-  if (file.exists(wf)) {
+  if (nsr_has_wgsrpd_raster(dir)) {
     widx <- as.data.frame(nanoparquet::read_parquet(nsr_raster_path("wgsrpd3_index", dir)))
     u <- as.integer(terra::extract(terra::rast(wf), xy)[, 1])
     out$wgsrpd3[ok] <- ifelse(is.na(u) | u == 0, NA_character_,
