@@ -68,7 +68,10 @@ it.
 With \code{use_coordinates = TRUE}, a record is placed by its point in each source's
 own geography (WCVP against WGSRPD level-3 areas, VASCAN and Flora do Brasil against
 GADM states), with no crosswalk between them - the finer question, where the data
-supports it.  Given coordinates and names together, the two are independent claims
+supports it.  That needs both rasters.  If one is missing, the point is placed in the
+other geography and its sources are reached through the region link table instead -
+the route a division name takes, and no more precise than one; a warning says so, and
+\code{NSR_local_status()} reports it as \code{coordinate_route = "crosswalk"}.  Given coordinates and names together, the two are independent claims
 about where the record is and either can be wrong: a transposed longitude and a
 mistyped province are equally easy mistakes, so neither is authoritative.  Where they
 agree, both are used.  Where they disagree, \code{place_conflict} is \code{TRUE},

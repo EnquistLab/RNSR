@@ -74,9 +74,11 @@ nsr_wgsrpd_polygons <- function() {
 nsr_build_region_links <- function(dir = nsr_cache_dir(), gadm_raster = NULL, block_rows = 500,
                                    within_threshold = 0.95, quiet = FALSE) {
   if (!requireNamespace("terra", quietly = TRUE)) stop("Needs the 'terra' package.", call. = FALSE)
-  if (is.null(gadm_raster)) gadm_raster <- file.path(dir, "gadmindex-units-30s.tif")
-  if (!file.exists(gadm_raster)) {
-    stop("The GADM unit index is not in ", dir, ".\n",
+  idx <- nsr_gadm_index(dir)
+  if (is.null(gadm_raster)) gadm_raster <- idx[["raster"]]
+  if (!file.exists(gadm_raster) || !file.exists(idx[["units"]])) {
+    stop("GVS's GADM unit index is not complete in ", dir, ": it needs both ",
+         basename(idx[["raster"]]), " and ", basename(idx[["units"]]), ".\n",
          "Build it with GVS (GVS_local_build(\"index\")); NSR reuses it rather than making its own.",
          call. = FALSE)
   }
@@ -89,7 +91,7 @@ nsr_build_region_links <- function(dir = nsr_cache_dir(), gadm_raster = NULL, bl
     stop("The WGSRPD and GADM rasters do not align; rebuild one at the other's resolution.",
          call. = FALSE)
   }
-  units <- as.data.frame(nanoparquet::read_parquet(file.path(dir, "gadmindex-units.gz.parquet")))
+  units <- as.data.frame(nanoparquet::read_parquet(idx[["units"]]))
   widx <- as.data.frame(nanoparquet::read_parquet(nsr_raster_path("wgsrpd3_index", dir)))
 
   nr <- terra::nrow(w)
@@ -162,6 +164,21 @@ nsr_build_region_links <- function(dir = nsr_cache_dir(), gadm_raster = NULL, bl
   invisible(links)
 }
 
+#' GVS's GADM unit index: a raster of unit numbers and the table that decodes them
+#'
+#' Internal.  One thing in two files, so they are only ever checked together: a shared
+#' cache can hold one without the other, and the raster alone answers nothing.
+#' @keywords internal
+#' @noRd
+nsr_gadm_index <- function(dir) {
+  c(raster = file.path(dir, "gadmindex-units-30s.tif"),
+    units = file.path(dir, "gadmindex-units.gz.parquet"))
+}
+
+#' @keywords internal
+#' @noRd
+nsr_has_gadm_index <- function(dir) all(file.exists(nsr_gadm_index(dir)))
+
 #' Locate coordinates in both region systems
 #'
 #' Internal.  Raster lookup in the WGSRPD level-3 raster and in the GADM unit index, so a
@@ -186,10 +203,10 @@ nsr_locate_regions <- function(longitude, latitude, dir = nsr_cache_dir()) {
     out$wgsrpd3[ok] <- ifelse(is.na(u) | u == 0, NA_character_,
                               paste0("wgsrpd3:", widx$area_code_l3[match(u, widx$unit)]))
   }
-  gf <- file.path(dir, "gadmindex-units-30s.tif")
-  if (file.exists(gf)) {
-    units <- as.data.frame(nanoparquet::read_parquet(file.path(dir, "gadmindex-units.gz.parquet")))
-    u <- as.integer(terra::extract(terra::rast(gf), xy)[, 1])
+  gi <- nsr_gadm_index(dir)
+  if (nsr_has_gadm_index(dir)) {
+    units <- as.data.frame(nanoparquet::read_parquet(gi[["units"]]))
+    u <- as.integer(terra::extract(terra::rast(gi[["raster"]]), xy)[, 1])
     i <- match(u, units$unit)
     out$gadm[ok] <- ifelse(is.na(i), NA_character_,
                            ifelse(!is.na(units$gid_1[i]), paste0("gadm1:", units$gid_1[i]),

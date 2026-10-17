@@ -145,7 +145,28 @@ nsr_geography <- function(dir) {
   list(raster = file.exists(nsr_raster_path("wgsrpd3", dir)) &&
                 file.exists(nsr_raster_path("wgsrpd3_index", dir)),
        links = file.exists(nsr_table_path("region-links", dir)),
-       gadm_index = file.exists(file.path(dir, "gadmindex-units-30s.tif")))
+       gadm_index = nsr_has_gadm_index(dir))
+}
+
+#' How a query reaches the opinions published against one geography
+#'
+#' Internal.  The single rule \code{NSR_local_status()} reports and \code{NSR_local()}
+#' warns by, so the two cannot disagree.  By name: GADM directly, WGSRPD only through the
+#' link table.  By coordinates: \code{"direct"} when the point is placed in that geography
+#' by its own raster; \code{"crosswalk"} when it is placed only in the other geography and
+#' carried over by the link table - the route a division name takes, and no more precise
+#' than one; \code{"none"} otherwise.  Any system but \code{"wgsrpd3"} is treated as GADM.
+#' @keywords internal
+#' @noRd
+nsr_name_reach <- function(system, geo) if (identical(system, "wgsrpd3")) geo$links else TRUE
+
+#' @keywords internal
+#' @noRd
+nsr_coordinate_reach <- function(system, geo) {
+  wgs <- identical(system, "wgsrpd3")
+  own <- if (wgs) geo$raster else geo$gadm_index
+  other <- if (wgs) geo$gadm_index else geo$raster
+  if (own) "direct" else if (other && geo$links) "crosswalk" else "none"
 }
 
 #' Warn once per session about a given state of a given cache
@@ -167,11 +188,15 @@ nsr_warn_once <- function(key, ...) {
 #' @param dir Cache directory.  Defaults to the one shared with GNRS and GVS.
 #' @return A data.frame with one row per source: whether it is built, how many checklist
 #'   records and taxa it contributed, and when it was built; and whether a query can
-#'   actually reach it - \code{answers_by_name} and \code{answers_by_coordinates}.  A
+#'   actually reach it - \code{answers_by_name} and \code{answers_by_coordinates} - and
+#'   by which route coordinates get there, \code{coordinate_route}: \code{"direct"} when
+#'   the point is placed in the source's own geography, \code{"crosswalk"} when it is
+#'   placed only in the other geography and carried over by the region link table (the
+#'   route a division name takes, and no more precise), \code{"none"} otherwise.  A
 #'   source can be built and still unreachable: WCVP's opinions are published against
-#'   WGSRPD areas, so names reach them only through the region link table and coordinates
-#'   only through the WGSRPD raster.  If either failed during the build, \code{built} is
-#'   \code{TRUE} and the corresponding column is \code{FALSE}; re-run
+#'   WGSRPD areas, so names reach them only through the link table, and coordinates
+#'   directly only through the WGSRPD raster.  If either is missing, \code{built} is
+#'   \code{TRUE} and these columns say what is lost; re-run
 #'   \code{NSR_local_build(overwrite = TRUE)} and read its warnings for the cause.
 #' @export
 NSR_local_status <- function(dir = nsr_cache_dir()) {
@@ -184,15 +209,17 @@ NSR_local_status <- function(dir = nsr_cache_dir()) {
   geo <- nsr_geography(dir)
   out <- do.call(rbind, lapply(reg, function(s) {
     row <- if (!is.null(src) && s$source_name %in% src$source_name) src[src$source_name == s$source_name, ] else NULL
-    wgs <- identical(s$region_system, "wgsrpd3")
     data.frame(
       source = s$source_name, coverage = s$coverage, licence = s$licence,
       built = !is.null(row),
       n_records = if (is.null(row)) NA_integer_ else as.integer(row$n_records),
       n_taxa = if (is.null(row)) NA_integer_ else as.integer(row$n_taxa),
       date_built = if (is.null(row)) NA_character_ else as.character(row$date_accessed),
-      answers_by_name = if (is.null(row)) NA else if (wgs) geo$links else TRUE,
-      answers_by_coordinates = if (is.null(row)) NA else if (wgs) geo$raster else geo$gadm_index,
+      answers_by_name = if (is.null(row)) NA else nsr_name_reach(s$region_system, geo),
+      answers_by_coordinates = if (is.null(row)) NA else
+        nsr_coordinate_reach(s$region_system, geo) != "none",
+      coordinate_route = if (is.null(row)) NA_character_ else
+        nsr_coordinate_reach(s$region_system, geo),
       stringsAsFactors = FALSE
     )
   }))

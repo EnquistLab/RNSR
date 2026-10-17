@@ -65,3 +65,48 @@ test_that("a cache with its link table is not warned about", {
   expect_no_warning(NSR_local(query, dir = dir, resolve_names = FALSE, quiet = TRUE))
   expect_true(NSR_local_status(dir)$answers_by_name[1])
 })
+
+# GVS's GADM index is one thing in two files: the raster of unit numbers and the table
+# that decodes them.  A shared cache can hold one without the other.
+test_that("the GADM index counts only when both of its files are present", {
+  dir <- broken_cache()
+  file.create(file.path(dir, "gadmindex-units-30s.tif"))
+  expect_false(NSR:::nsr_geography(dir)$gadm_index)
+  file.create(file.path(dir, "gadmindex-units.gz.parquet"))
+  expect_true(NSR:::nsr_geography(dir)$gadm_index)
+})
+
+test_that("coordinates reach a geography directly, by crosswalk, or not at all", {
+  geo <- function(raster, gadm, links) list(raster = raster, gadm_index = gadm, links = links)
+  reach <- NSR:::nsr_coordinate_reach
+  expect_equal(reach("wgsrpd3", geo(TRUE,  FALSE, FALSE)), "direct")
+  expect_equal(reach("wgsrpd3", geo(FALSE, TRUE,  TRUE)),  "crosswalk")
+  expect_equal(reach("wgsrpd3", geo(FALSE, TRUE,  FALSE)), "none")
+  expect_equal(reach("gadm1",   geo(FALSE, TRUE,  FALSE)), "direct")
+  expect_equal(reach("gadm1",   geo(TRUE,  FALSE, TRUE)),  "crosswalk")
+  expect_equal(reach("gadm1",   geo(FALSE, FALSE, TRUE)),  "none")
+})
+
+# Without the WGSRPD raster, a point still lands in a GADM unit and reaches WCVP through
+# the link table, exactly as a division name would.  Status and the warning must say that,
+# rather than claiming WCVP is unreachable when it is answering.
+test_that("a crosswalked route is reported as one, not as unreachable", {
+  dir <- broken_cache()
+  nanoparquet::write_parquet(
+    data.frame(from_region = "gadm1:CAN.11_1", to_region = "wgsrpd3:QUE", relation = "same",
+               fraction = 0.99, stringsAsFactors = FALSE),
+    file.path(dir, "nsr-region-links.gz.parquet"), compression = "gzip")
+  file.create(file.path(dir, c("gadmindex-units-30s.tif", "gadmindex-units.gz.parquet")))
+  w <- NSR_local_status(dir)[1, ]
+  expect_true(w$answers_by_coordinates)
+  expect_equal(w$coordinate_route, "crosswalk")
+  forget_warnings()
+  expect_warning(
+    NSR_local(query, dir = dir, resolve_names = FALSE, quiet = TRUE, use_coordinates = TRUE),
+    "only through the crosswalk division names use")
+  forget_warnings()
+  msg <- tryCatch(
+    NSR_local(query, dir = dir, resolve_names = FALSE, quiet = TRUE, use_coordinates = TRUE),
+    warning = conditionMessage)
+  expect_false(grepl("will be UNK", msg))
+})

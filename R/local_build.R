@@ -181,8 +181,7 @@ NSR_local_build <- function(sources = "wcvp",
   # That holds for a wcvp-only build as much as a mixed one - hence no test on the
   # number of systems, which is what used to leave the default build unanswerable.
   needs_links <- "wgsrpd3" %in% systems || length(systems) > 1
-  gadm_index <- file.path(dir, "gadmindex-units-30s.tif")
-  if (needs_links && raster_ok && file.exists(gadm_index)) {
+  if (needs_links && raster_ok && nsr_has_gadm_index(dir)) {
     msg("Linking region systems (", paste(c(systems, "gadm"), collapse = ", "), ") ...")
     r <- try(nsr_build_region_links(dir = dir, quiet = quiet), silent = TRUE)
     if (inherits(r, "try-error")) {

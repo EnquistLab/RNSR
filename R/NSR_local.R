@@ -26,7 +26,10 @@
 #' With \code{use_coordinates = TRUE}, a record is placed by its point in each source's
 #' own geography (WCVP against WGSRPD level-3 areas, VASCAN and Flora do Brasil against
 #' GADM states), with no crosswalk between them - the finer question, where the data
-#' supports it.  Given coordinates and names together, the two are independent claims
+#' supports it.  That needs both rasters.  If one is missing, the point is placed in the
+#' other geography and its sources are reached through the region link table instead -
+#' the route a division name takes, and no more precise than one; a warning says so, and
+#' \code{NSR_local_status()} reports it as \code{coordinate_route = "crosswalk"}.  Given coordinates and names together, the two are independent claims
 #' about where the record is and either can be wrong: a transposed longitude and a
 #' mistyped province are equally easy mistakes, so neither is authoritative.  Where they
 #' agree, both are used.  Where they disagree, \code{place_conflict} is \code{TRUE},
@@ -137,19 +140,35 @@ NSR_local <- function(occurrence_dataframe, dir = nsr_cache_dir(), resolve_names
   # link table failed during the build, WCVP's opinions are in the checklist but no query
   # arrives at them, and every answer that depends on WCVP comes back UNK looking like an
   # honest "no data".  Say so, once per session per state of the cache.
-  if ("wgsrpd3" %in% db$regions$system) {
-    geo <- nsr_geography(dir)
-    gaps <- c(
-      if (!geo$links) "division names cannot reach them (the region link table is missing)",
-      if (use_coordinates && !geo$raster)
-        "coordinates cannot be placed in their regions (the WGSRPD raster is missing)")
-    if (length(gaps)) {
-      nsr_warn_once(paste(normalizePath(dir), paste(gaps, collapse = "|")),
-                    "This cache holds WCVP opinions, but ", paste(gaps, collapse = "; and "),
-                    ". Answers that depend on WCVP will be UNK. Re-run ",
-                    "NSR_local_build(overwrite = TRUE) and read its warnings for the cause; ",
-                    "NSR_local_status() shows what each source can answer.")
+  # Same rule as NSR_local_status(), via nsr_name_reach() / nsr_coordinate_reach().
+  geo <- nsr_geography(dir)
+  lost <- character(0)
+  coarse <- character(0)
+  for (sys in unique(ifelse(db$regions$system == "wgsrpd3", "wgsrpd3", "gadm"))) {
+    what <- if (sys == "wgsrpd3") "WCVP's opinions (published against WGSRPD)" else
+      "opinions published against GADM states"
+    why <- if (sys == "wgsrpd3") "the WGSRPD raster is missing" else
+      "GVS's GADM index is missing or incomplete"
+    if (!nsr_name_reach(sys, geo)) {
+      lost <- c(lost, paste0(what, " by division name (the region link table is missing)"))
     }
+    if (use_coordinates) {
+      r <- nsr_coordinate_reach(sys, geo)
+      if (r == "none") lost <- c(lost, paste0(what, " by coordinates (", why, ")"))
+      if (r == "crosswalk") coarse <- c(coarse, paste0(what, " by coordinates only through ",
+                                                       "the crosswalk division names use (", why, ")"))
+    }
+  }
+  if (length(lost) || length(coarse)) {
+    nsr_warn_once(
+      paste(normalizePath(dir), paste(c(lost, coarse), collapse = "|")),
+      if (length(lost)) paste0("This cache cannot reach ", paste(lost, collapse = "; nor "),
+                               ". Answers that depend on them will be UNK. ") else "",
+      if (length(coarse)) paste0("This cache reaches ", paste(coarse, collapse = "; and "),
+                                 ", so those answers are only as precise as a division ",
+                                 "name would give. ") else "",
+      "Re-run NSR_local_build(overwrite = TRUE) and read its warnings for the cause; ",
+      "NSR_local_status() shows what each source can answer.")
   }
 
   # ---- taxa -------------------------------------------------------------------------
