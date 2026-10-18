@@ -316,3 +316,74 @@ test_that("a sibling state's coverage says nothing about this one", {
   expect_equal(NSR:::nsr_resolve_status("t3", p, db)$code, "UNK")
   expect_equal(NSR:::nsr_resolve_status_set("t3", p, db)$code, "UNK")
 })
+
+# Absence needs the whole place covered.  A comprehensive list for one of a country's
+# states says nothing about the others, so it cannot make the country A.
+rebuild <- function(db, checklist = db$checklist, links = db$links) {
+  NSR:::nsr_index_db(list(sources = db$sources, taxa = db$taxa, checklist = checklist,
+                          regions = db$regions, links = links))
+}
+
+test_that("one covered state does not make its country absent", {
+  skip_if_not_installed("data.table")
+  db0 <- fixture_db()
+  db <- rebuild(db0, checklist = db0$checklist[db0$checklist$region_key != "gadm0:CAN", ])
+  expect_false("gadm0:CAN" %in% db$covered)
+  expect_true("gadm1:CAN.11_1" %in% db$covered)
+  p <- list(fine = list(character(0)), country = list("gadm0:CAN"))
+  expect_equal(NSR:::nsr_resolve_status("t3", p, db)$code, "UNK")
+  expect_equal(NSR:::nsr_resolve_status_set("t3", p, db)$code, "UNK")
+})
+
+test_that("covered polygons that make up the place do establish absence", {
+  skip_if_not_installed("data.table")
+  db0 <- fixture_db()
+  chk <- db0$checklist[db0$checklist$region_key != "gadm0:CAN", ]
+  # Canada as two WGSRPD areas, both comprehensively listed: 60% and 40% of it
+  part <- function(f) rbind(db0$links, data.frame(
+    from_region = "gadm0:CAN", to_region = c("wgsrpd3:QUE", "wgsrpd3:ONT")[seq_along(f)],
+    relation = "contains", fraction = f, stringsAsFactors = FALSE))
+  p <- list(fine = list(character(0)), country = list("gadm0:CAN"))
+  # only 60% of Canada accounted for: absence is not established
+  db <- rebuild(db0, checklist = chk, links = part(0.6))
+  expect_equal(NSR:::nsr_resolve_status("t7", p, db)$code, "UNK")
+  expect_equal(NSR:::nsr_resolve_status_set("t7", p, db)$code, "UNK")
+  # all of it: t7 is on none of the lists, and native only in Brazil - so Ie
+  db <- rebuild(db0, checklist = chk, links = part(c(0.6, 0.4)))
+  expect_equal(NSR:::nsr_resolve_status("t7", p, db)$code, "Ie")
+  expect_equal(NSR:::nsr_resolve_status_set("t7", p, db)$code, "Ie")
+})
+
+# A point described in two geographies must not follow a link from one back into the
+# other: that reaches the second geography's OTHER polygons.
+test_that("links are never followed into a geography the place already holds", {
+  skip_if_not_installed("data.table")
+  db0 <- fixture_db()
+  # WGSRPD's QUE also contains a sibling GADM state, New Brunswick
+  db <- rebuild(db0, links = rbind(db0$links, data.frame(
+    from_region = "wgsrpd3:QUE", to_region = "gadm1:CAN.4_1", relation = "contains",
+    fraction = 0.05, stringsAsFactors = FALSE)))
+  pt <- list(fine = list(c("wgsrpd3:QUE", "gadm1:CAN.11_1")), country = list(character(0)))
+  # t5 is native in Quebec and New Brunswick, so not endemic to this point's state
+  expect_equal(NSR:::nsr_resolve_status("t5", pt, db)$code, "N")
+  expect_equal(NSR:::nsr_resolve_status_set("t5", pt, db)$code, "N")
+  # and coverage: an uncovered pair of keys is not covered through the sibling...
+  db2 <- rebuild(db0, links = rbind(db0$links, data.frame(
+    from_region = "wgsrpd3:SLIVER", to_region = "gadm1:CAN.4_1", relation = "same",
+    fraction = 0.99, stringsAsFactors = FALSE)))
+  expect_false(NSR:::nsr_place_covered(c("wgsrpd3:SLIVER", "gadm1:CAN.9_1"), character(0), db2))
+  # ...though with no GADM key of its own, the link is exactly how it is reached
+  expect_true(NSR:::nsr_place_covered("wgsrpd3:SLIVER", character(0), db2))
+})
+
+test_that("sub-polygons are counted once, however many sources speak about them", {
+  skip_if_not_installed("data.table")
+  db0 <- fixture_db()
+  db <- rebuild(db0, checklist = rbind(db0$checklist, data.frame(
+    taxon_id = "t5", region_key = "gadm1:CAN.11_1", status = "native", source_name = "other",
+    is_cultivated = 0L, is_extinct = 0L, stringsAsFactors = FALSE)))
+  p <- list(fine = list(character(0)), country = list("gadm0:CAN"))
+  # Quebec (two sources) and New Brunswick: two native sub-polygons, three opinions
+  expect_equal(NSR:::nsr_resolve_status("t5", p, db)$n_sub_native, 2L)
+  expect_equal(NSR:::nsr_resolve_status_set("t5", p, db)$n_sub_native, 2L)
+})

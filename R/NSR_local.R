@@ -504,19 +504,17 @@ nsr_resolve_status <- function(taxon_id, places, db, min_overlap = 0.01,
       if (exclude_extinct && length(rows)) rows <- rows[!db$chk_extinct[rows]]
       if (length(rows)) {
         add <- list(status = db$chk_status[rows], source_name = db$chk_source[rows],
-                    is_cultivated = db$chk_cult[rows], relation = rep("within", length(rows)))
+                    is_cultivated = db$chk_cult[rows], relation = rep("within", length(rows)),
+                    region = db$chk_region[rows])
         op <- if (is.null(op)) add else Map(c, op, add)
       }
     }
-    # The ancestor country supplies opinions above, so absence is read against it too:
-    # a comprehensive list for the whole country that omits the taxon says it is absent
-    # from every part of that country.  The country key itself, NOT its expansion - the
-    # expansion reaches its other states, and a comprehensive list for Quebec says
-    # nothing about Saskatchewan.  This matches the set path, whose Q holds the country
-    # row but follows links and children only from the query's own polygons.
-    consulted <- unique(c(nsr_consulted_regions(keys, db, min_overlap), anc))
+    # Absence is read against the whole place: see nsr_place_covered().  The ancestor
+    # country counts as itself - a comprehensive list for the whole country that omits
+    # the taxon says it is absent from every part of it - but never through its other
+    # states, since a comprehensive list for Quebec says nothing about Saskatchewan.
     ev <- tid %in% db$evaluable
-    r <- nsr_reduce(op, consulted, ev, db)
+    r <- nsr_reduce(op, nsr_place_covered(keys, anc, db, min_overlap), ev, db)
     if (identical(r$code, "N") && nsr_is_endemic(tid, keys, db, min_overlap)) {
       r$code <- "Ne"
       r$reason <- paste0(sub("^Native", "Native and endemic", r$reason))
@@ -533,11 +531,11 @@ nsr_resolve_status <- function(taxon_id, places, db, min_overlap = 0.01,
     # per-level codes, for the service's columns
     out$country_code[i] <- if (length(ctry)) {
       nsr_reduce(nsr_opinions_for(tid, ctry, db, min_overlap, exclude_extinct),
-                 nsr_consulted_regions(ctry, db, min_overlap), ev, db)$code
+                 nsr_place_covered(ctry, character(0), db, min_overlap), ev, db)$code
     } else NA_character_
     out$state_code[i] <- if (length(fine)) {
       nsr_reduce(nsr_opinions_for(tid, fine, db, min_overlap, exclude_extinct),
-                 nsr_consulted_regions(fine, db, min_overlap), ev, db)$code
+                 nsr_place_covered(fine, character(0), db, min_overlap), ev, db)$code
     } else NA_character_
   }
   out
@@ -620,7 +618,7 @@ nsr_opinions_for <- function(taxon_id, keys, db, min_overlap = 0.01, exclude_ext
   }
   if (!length(rows)) return(NULL)
   list(status = db$chk_status[rows], source_name = db$chk_source[rows],
-       is_cultivated = db$chk_cult[rows], relation = rel)
+       is_cultivated = db$chk_cult[rows], relation = rel, region = db$chk_region[rows])
 }
 
 #' Is the taxon native only inside the queried place?
@@ -636,8 +634,16 @@ nsr_is_endemic <- function(taxon_id, keys, db, min_overlap = 0.01) {
   nat <- db$chk_region[rows][db$chk_status[rows] == "native"]
   if (!length(nat)) return(FALSE)
   li <- unlist(mget(keys, db$link_env, ifnotfound = list(NULL)), use.names = FALSE)
+  # A place located in two geographies (a point with a WGSRPD and a GADM key) is already
+  # described in both; following a link from one into the other would pull in that
+  # geography's OTHER polygons - a sibling state inside the same WGSRPD area - and call a
+  # taxon endemic to this state because it is native in that one.  Same filter as
+  # nsr_opinions_for(), and as the set path applies when it builds its links.
+  known <- unique(sub(":.*", "", keys))
   inside <- if (!length(li)) keys else
-    c(keys, db$link_to[li][db$link_rel[li] %in% c("same", "contains") & db$link_frac[li] >= min_overlap])
+    c(keys, db$link_to[li][db$link_rel[li] %in% c("same", "contains") &
+                             db$link_frac[li] >= min_overlap &
+                             !(sub(":.*", "", db$link_to[li]) %in% known)])
   inside <- c(inside, nsr_gadm_children(keys, db))
   all(nat %in% inside)
 }
@@ -674,24 +680,64 @@ nsr_endemic_elsewhere <- function(taxon_id, keys, db, min_overlap = 0.01) {
   if (length(common)) nm(common[1]) else NA_character_
 }
 
-#' Every region an answer may draw on: the query's own, and those linked to them
+#' Every region bearing on the place: its own, and those linked to them
 #'
-#' Internal.  Used to decide whether absence is interpretable: a query about California
-#' finds no source publishing against GADM California, but WGSRPD's CAL is the same place
-#' and is comprehensively listed, so absence there does mean something.
+#' Internal.  Used by the \code{Ie} rule, to ask whether any of a taxon's native range
+#' touches the place at all - if it does, the taxon cannot be "endemic elsewhere".
+#' Absence is a different and stricter question, answered by
+#' \code{nsr_place_covered()}.
 #'
 #' \code{min_overlap} applies here for the same reason it applies to opinions: a link
-#' covering a sliver of a region is not that region being listed, and letting one through
-#' would turn "no opinion" into \code{A}, or suppress an \code{Ie}, on the strength of a
-#' shared coastline.  The set path filters its links once, when it builds them.
+#' covering a sliver of a region is not that region, and letting one through would suppress
+#' an \code{Ie} on the strength of a shared coastline.  And links are never followed into a
+#' geography the place already holds, as in \code{nsr_opinions_for()}.  The set path
+#' applies both filters once, when it builds its links.
 #' @keywords internal
 #' @noRd
 nsr_consulted_regions <- function(keys, db, min_overlap = 0.01) {
   if (!length(keys)) return(character(0))
   li <- unlist(mget(keys, db$link_env, ifnotfound = list(NULL)), use.names = FALSE)
   if (!length(li)) return(unique(c(keys, nsr_gadm_children(keys, db))))
-  keep <- db$link_rel[li] %in% c("same", "within", "contains") & db$link_frac[li] >= min_overlap
+  known <- unique(sub(":.*", "", keys))
+  keep <- db$link_rel[li] %in% c("same", "within", "contains") & db$link_frac[li] >= min_overlap &
+    !(sub(":.*", "", db$link_to[li]) %in% known)
   unique(c(keys, db$link_to[li][keep], nsr_gadm_children(keys, db)))
+}
+
+#' Is the whole of the place covered by a comprehensive checklist?
+#'
+#' Internal.  Absence (\code{A}) says the taxon is on none of the lists that would have
+#' listed it anywhere in the place, so it needs the WHOLE place covered: absence from one
+#' part is not absence from the whole, any more than a comprehensive list for Quebec says
+#' anything about Saskatchewan.  The place is covered when
+#' \itemize{
+#'   \item it, or the country it was given with, is comprehensively listed; or
+#'   \item a comprehensively listed polygon is the same place or contains it; or
+#'   \item comprehensively listed polygons inside it make up at least \code{whole} of it,
+#'     by the overlap fractions in the link table - which is how a country WCVP publishes
+#'     as several WGSRPD areas (Brazil, Canada, the USA) is covered.
+#' }
+#' A country's GADM states carry no fractions, so they cannot add up to the country; the
+#' country is then covered through WGSRPD, or not at all.  Links are never followed into a
+#' geography the place already holds.  \code{whole} is the link builder's threshold for
+#' "the same place", 0.95, which absorbs the mismatch between two independent coastlines.
+#' @return TRUE or FALSE.
+#' @keywords internal
+#' @noRd
+nsr_place_covered <- function(keys, anc = character(0), db, min_overlap = 0.01, whole = 0.95) {
+  if (any(c(keys, anc) %in% db$covered)) return(TRUE)
+  known <- unique(sub(":.*", "", keys))
+  for (k in keys) {
+    li <- db$link_env[[k]]
+    if (is.null(li)) next
+    to <- db$link_to[li]
+    rel <- db$link_rel[li]
+    fr <- db$link_frac[li]
+    ok <- fr >= min_overlap & !(sub(":.*", "", to) %in% known) & to %in% db$covered
+    if (any(ok & rel %in% c("same", "within"))) return(TRUE)
+    if (sum(fr[ok & rel == "contains"]) >= whole) return(TRUE)
+  }
+  FALSE
 }
 
 #' What kind of disagreement is this?
@@ -731,11 +777,17 @@ nsr_conflict_type <- function(status, source) {
 #' evaluable, else unknown.
 #' @keywords internal
 #' @noRd
-nsr_reduce <- function(op, keys, evaluable, db) {
+nsr_reduce <- function(op, cover, evaluable, db) {
+  # cover: whether the whole place is comprehensively listed (nsr_place_covered()), or,
+  # for direct calls, region keys any one of which being covered counts
+  covered <- if (is.logical(cover)) isTRUE(cover) else any(cover %in% db$covered)
   if (is.null(op)) {
-    st <- src <- rel <- character(0); cult <- integer(0)
+    st <- src <- rel <- reg <- character(0); cult <- integer(0)
   } else {
     st <- op$status; src <- op$source_name; rel <- op$relation; cult <- op$is_cultivated
+    # opinions are one per source; sub-polygons are counted once however many sources
+    # speak about them
+    reg <- if (is.null(op$region)) seq_along(st) else op$region
   }
   opinions <- if (!length(st)) NA_character_ else
     paste(paste0(src, ":", st, ifelse(rel == "same", "", paste0("(", rel, ")"))), collapse = "; ")
@@ -743,7 +795,8 @@ nsr_reduce <- function(op, keys, evaluable, db) {
   inc <- rel %in% c("same", "within")        # polygons the place lies in
   sub <- rel == "contains"                   # polygons inside the place
   ovl <- rel == "overlaps"
-  n_sub_n <- sum(sub & st == "native"); n_sub_i <- sum(sub & st == "introduced")
+  n_sub_n <- length(unique(reg[sub & st == "native"]))
+  n_sub_i <- length(unique(reg[sub & st == "introduced"]))
   out <- function(code, reason, scope, srcs = character(0), conflict = FALSE,
                   conflict_type = "none") {
     list(code = code, reason = reason, scope = scope,
@@ -782,6 +835,6 @@ nsr_reduce <- function(op, keys, evaluable, db) {
                "overlapping only", src[ovl]))
   }
   if (!evaluable) return(out("UNK", "No source holds native status information for this taxon", "none"))
-  if (any(keys %in% db$covered)) return(out("A", "Absent from the comprehensive checklists for this polygon", "polygon"))
+  if (covered) return(out("A", "Absent from the comprehensive checklists for this polygon", "polygon"))
   out("UNK", "No comprehensive checklist covers this polygon", "none")
 }

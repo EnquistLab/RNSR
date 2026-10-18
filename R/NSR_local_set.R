@@ -176,6 +176,7 @@ nsr_resolve_status_set1 <- function(taxon_id, places, db, min_overlap = 0.01,
   Q[, relation := data.table::fifelse(has_fine[qid] & region_key %in% unlist(ctry), "within", relation)]
   Q[, taxon_id := taxon_id[qid]]
   Q <- Q[!is.na(taxon_id) & !is.na(region_key)]
+  Q0 <- Q   # the place and the country it was given with: coverage counts these as-is
 
   # polygons related to the ones named: only the query's OWN polygons follow links, so a
   # country's other sub-polygons never reach a state-level query
@@ -186,9 +187,20 @@ nsr_resolve_status_set1 <- function(taxon_id, places, db, min_overlap = 0.01,
     known <- own[, list(sys = unique(sub(":.*", "", region_key))), by = "qid"]
     L[, to_sys := sub(":.*", "", to_region)]
     L <- L[!paste(qid, to_sys) %in% paste(known$qid, known$sys)]
-    L <- L[fraction >= min_overlap & to_region != from_region,
-           .(qid, region_key = to_region, relation = relation, taxon_id)]
-    Q <- data.table::rbindlist(list(Q, L), use.names = TRUE)
+    L <- L[fraction >= min_overlap & to_region != from_region]
+    Lcov <- L[to_region %in% db$covered]
+    Q <- data.table::rbindlist(list(Q, L[, .(qid, region_key = to_region, relation, taxon_id)]),
+                               use.names = TRUE)
+  }
+  # whole-place coverage, as nsr_place_covered(): the place or its country listed; a listed
+  # polygon that is it or contains it; or listed polygons inside it making up >= 95% of it.
+  # GADM children (added next) carry no fractions, so they never count.
+  covered <- rep(FALSE, n)
+  covered[unique(Q0[region_key %in% db$covered]$qid)] <- TRUE
+  if (exists("Lcov", inherits = FALSE) && nrow(Lcov)) {
+    covered[unique(Lcov[relation %in% c("same", "within")]$qid)] <- TRUE
+    whole <- Lcov[relation == "contains", list(s = sum(fraction)), by = c("qid", "from_region")]
+    covered[unique(whole[s >= 0.95]$qid)] <- TRUE
   }
   # GADM's exact parent/child containment, joined on the query's OWN polygons only so a
   # country's other states never reach a state-level query.  Deliberately after the
@@ -213,7 +225,7 @@ nsr_resolve_status_set1 <- function(taxon_id, places, db, min_overlap = 0.01,
   # after the join, so the checklist is never copied just to drop 0.14% of its rows
   if (exclude_extinct && nrow(O) && "is_extinct" %in% names(O)) O <- O[is_extinct == 0L]
   if (!nrow(O)) return(nsr_set_finish(out, taxon_id, db, n, Q, endemism = endemism,
-                                      has_place = has_place))
+                                      has_place = has_place, covered = covered))
 
   O[, `:=`(inc = relation %in% c("same", "within"), sub = relation == "contains",
            ovl = relation == "overlaps")]
@@ -232,7 +244,8 @@ nsr_resolve_status_set1 <- function(taxon_id, places, db, min_overlap = 0.01,
   ), by = qid]
 
   sub <- O[sub == TRUE]
-  subagg <- sub[, .(n_sub_nat = sum(status == "native"), n_sub_int = sum(status == "introduced"),
+  subagg <- sub[, .(n_sub_nat = data.table::uniqueN(region_key[status == "native"]),
+                    n_sub_int = data.table::uniqueN(region_key[status == "introduced"]),
                     sub_sets = data.table::uniqueN(status), sub_status = status[1],
                     sub_srcs = paste(sort(unique(source_name)), collapse = ", ")), by = qid]
   ovlagg <- O[ovl == TRUE, .(ovl_srcs = paste(sort(unique(source_name)), collapse = ", ")), by = qid]
@@ -303,23 +316,19 @@ nsr_resolve_status_set1 <- function(taxon_id, places, db, min_overlap = 0.01,
   # "none" is the contract value for a result nothing disagreed about; NA here would be
   # read as unknown, and the row path says "none" for the same query
   out$conflict_type[!is.na(out$code) & is.na(out$conflict_type)] <- "none"
-  nsr_set_finish(out, taxon_id, db, n, Q, endemism = endemism, has_place = has_place)
+  nsr_set_finish(out, taxon_id, db, n, Q, endemism = endemism, has_place = has_place,
+                 covered = covered)
 }
 
 #' Fill in the answers that need no opinions: absence, unknowns, and endemism
 #' @keywords internal
 #' @noRd
 nsr_set_finish <- function(out, taxon_id, db, n, Q = NULL, endemism = TRUE,
-                           has_place = TRUE) {
+                           has_place = TRUE, covered = NULL) {
   dt <- function(...) data.table::data.table(...)
   evaluable <- !is.na(taxon_id) & taxon_id %in% db$evaluable
-  # the regions each query consulted, for the coverage test
-  covered <- rep(FALSE, n)
-  if (!is.null(Q) && nrow(Q)) {
-    cv <- Q[relation %in% c("same", "within", "contains") & region_key %in% db$covered,
-            .(any = TRUE), by = qid]
-    covered[cv$qid] <- TRUE
-  }
+  # whole-place coverage, computed by nsr_resolve_status_set1() before links were merged
+  if (is.null(covered)) covered <- rep(FALSE, n)
   no_answer <- is.na(out$code)
   out$code[no_answer] <- data.table::fcase(
     !evaluable[no_answer], "UNK",

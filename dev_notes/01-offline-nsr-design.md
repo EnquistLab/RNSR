@@ -292,6 +292,20 @@ sources are added: each new checklist can only widen the evaluable set.
 This is a deliberate divergence from the service, and one to report upstream: the same query that
 returns `A` there returns `UNK` here.
 
+**Absence needs the whole place covered (2026-10-18).** `A` claims the taxon is on none of the
+lists that would have listed it anywhere in the place, so a comprehensive list for part of the
+place is not enough: absence from Quebec's list says nothing about Saskatchewan, so it cannot make
+the taxon absent from Canada. (The same universal/existential distinction as the higher-rank rules:
+"not on Canada's list" is true of every part of Canada; "not on Quebec's list" is true of one.)
+`nsr_place_covered()` and the set path both treat the place as covered when it, or the country it
+was given with, is comprehensively listed; when a listed polygon is the same place or contains it;
+or when listed polygons inside it make up at least 95% of it, by the link table's overlap fractions.
+The last case is what keeps country-level absence for countries WCVP publishes as several WGSRPD
+areas - Brazil, Canada, the USA - where no single area contains the country. A country's GADM
+states carry no fractions, so they cannot add up to it. Until this, any one covered sub-polygon was
+enough, which with today's sources (WCVP covers every area; VASCAN and Flora do Brasil cover every
+state of their countries) never misfired, but would have with the first partial source.
+
 ## Validation
 
 1. **Against the live service**, on a stratified sample of BIEN and GBIF records (target ~50,000
