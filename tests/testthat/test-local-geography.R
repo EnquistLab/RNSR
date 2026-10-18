@@ -299,3 +299,12 @@ test_that("a name is indexed to its species, not to another rank that shares it"
                       genus = "Gen", rank = "Species", stringsAsFactors = FALSE)
   expect_equal(ix(taxa2, "s2")$taxon_id[ix(taxa2, "s2")$species_name == "Gen spec"], "s2")
 })
+
+test_that("a cache directory passed as dir is created", {
+  dir <- file.path(tempdir(), paste0("nsr-new-", as.integer(stats::runif(1, 1, 1e9))), "deeper")
+  expect_false(dir.exists(dir))
+  # vascan needs the backbone, which an empty directory lacks: the build stops there - but
+  # only after making the directory, as it does for the default location
+  expect_error(NSR_local_build("vascan", dir = dir, quiet = TRUE), "GNRS backbone")
+  expect_true(dir.exists(dir))
+})

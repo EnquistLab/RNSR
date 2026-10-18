@@ -526,7 +526,7 @@ nsr_resolve_status <- function(taxon_id, places, db, min_overlap = 0.01,
       r$reason <- paste0(sub("^Native", "Native and endemic", r$reason))
     }
     if (identical(r$code, "A")) {
-      ee <- nsr_endemic_elsewhere(tid, keys, db, min_overlap)
+      ee <- nsr_endemic_elsewhere(tid, keys, db, min_overlap, anc)
       if (!is.na(ee)) {
         r$code <- "Ie"
         r$reason <- paste0("Absent from this region and endemic to ", ee,
@@ -664,12 +664,18 @@ nsr_is_endemic <- function(taxon_id, keys, db, min_overlap = 0.01) {
 #' @return The name of the region it is endemic to, or NA.
 #' @keywords internal
 #' @noRd
-nsr_endemic_elsewhere <- function(taxon_id, keys, db, min_overlap = 0.01) {
+nsr_endemic_elsewhere <- function(taxon_id, keys, db, min_overlap = 0.01, anc = character(0)) {
   rows <- db$chk_idx_taxon[[as.character(taxon_id)]]
   if (is.null(rows)) return(NA_character_)
   nat <- unique(db$chk_region[rows][db$chk_status[rows] == "native"])
   if (!length(nat)) return(NA_character_)
-  if (any(nat %in% nsr_consulted_regions(keys, db, min_overlap))) return(NA_character_)
+  # The country the place was given with is part of the place, so a native range there is
+  # not "elsewhere" - otherwise a lost population recorded at country level (an extinct
+  # country row, dropped by exclude_extinct) would read as endemic to the very country the
+  # record is in, and be called introduced.  The country itself only, not its expansion:
+  # its other states are elsewhere, and a taxon confined to Ontario IS introduced in Quebec.
+  # The set path reads the same, since its Q holds the country row unexpanded.
+  if (any(nat %in% c(nsr_consulted_regions(keys, db, min_overlap), anc))) return(NA_character_)
   nm <- function(k) {
     i <- match(k, db$regions$region_key)
     if (is.na(i)) k else db$regions$region_name[i]

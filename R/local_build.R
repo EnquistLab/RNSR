@@ -40,6 +40,9 @@
 NSR_local_build <- function(sources = "wcvp",
                             dir = nsr_cache_dir(create = TRUE),
                             files = list(), overwrite = FALSE, quiet = FALSE) {
+  # the default location is created by nsr_cache_dir(create = TRUE); one passed as dir =
+  # must be too, or the first table written fails on a missing directory
+  if (!dir.exists(dir)) dir.create(dir, recursive = TRUE, showWarnings = FALSE)
   # TNRS is needed only to resolve checklist names that arrive without a WCVP id, which
   # WCVP's own rows never do - so a wcvp-only build must not require it.
   # nsr_resolve_names() checks for it at the point it is actually used.

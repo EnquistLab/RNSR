@@ -387,3 +387,23 @@ test_that("sub-polygons are counted once, however many sources speak about them"
   expect_equal(NSR:::nsr_resolve_status("t5", p, db)$n_sub_native, 2L)
   expect_equal(NSR:::nsr_resolve_status_set("t5", p, db)$n_sub_native, 2L)
 })
+
+test_that("a lost country-level population is absent from that country's states, not introduced", {
+  skip_if_not_installed("data.table")
+  db0 <- fixture_db()
+  # t9's only native record is extinct, and at country level; t10 is native only in New
+  # Brunswick, a sibling of the queried state
+  extra <- data.frame(
+    taxon_id = c("t9", "t10"), region_key = c("gadm0:CAN", "gadm1:CAN.4_1"),
+    status = "native", source_name = "vascan", is_cultivated = 0L, is_extinct = c(1L, 0L),
+    stringsAsFactors = FALSE)
+  db <- rebuild(db0, checklist = rbind(db0$checklist, extra))
+  p <- list(fine = list("gadm1:CAN.11_1"), country = list("gadm0:CAN"))
+  # lost from Canada: absent from Quebec, and not introduced there
+  expect_equal(NSR:::nsr_resolve_status("t9", p, db)$code, "A")
+  expect_equal(NSR:::nsr_resolve_status_set("t9", p, db)$code, "A")
+  # the country is added as itself, not expanded to its states: a taxon confined to New
+  # Brunswick is still endemic elsewhere when asked about Quebec
+  expect_equal(NSR:::nsr_resolve_status("t10", p, db)$code, "Ie")
+  expect_equal(NSR:::nsr_resolve_status_set("t10", p, db)$code, "Ie")
+})
