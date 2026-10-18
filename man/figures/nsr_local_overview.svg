@@ -1,0 +1,241 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2000" height="1645" viewBox="0 0 2000 1645"
+     font-family="Helvetica Neue, Helvetica, Arial, sans-serif">
+  <title>How NSR_local() works</title>
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#555"/>
+    </marker>
+    <style>
+      .t30 { font-size: 30px; font-weight: 700; }
+      .b24 { font-size: 24px; fill: #222; }
+      .b21 { font-size: 21px; fill: #222; }
+      .h22 { font-size: 22px; font-weight: 700; }
+      .h25 { font-size: 25px; font-weight: 700; }
+      .mono { font-family: Menlo, Consolas, "DejaVu Sans Mono", monospace; }
+      .tag { font-size: 16px; fill: #6b7280; }
+      .arrow { stroke: #555; stroke-width: 3; fill: none; marker-end: url(#arr); }
+      .note { font-size: 18px; font-style: italic; fill: #555; }
+      .grey   { fill: #f3f3f1; stroke: #9a9a9a; }
+      .blue   { fill: #e9eff9; stroke: #3f72b8; }
+      .green  { fill: #e9f3e7; stroke: #4e9a4e; }
+      .orange { fill: #fbf1e0; stroke: #c8902e; }
+      .cgrey { fill: #333333; } .cblue { fill: #2b5a9b; } .cgreen { fill: #3a7a3a; }
+      .corange { fill: #94600c; } .cslate { fill: #2f3a4a; }
+    </style>
+  </defs>
+  <rect width="2000" height="1645" fill="#ffffff"/>
+
+  <!-- ============================== row 1: inputs ============================== -->
+  <g stroke-width="3">
+    <rect class="orange" x="16"   y="16" width="376" height="254" rx="14"/>
+    <rect class="grey"   x="414"  y="16" width="376" height="254" rx="14"/>
+    <rect class="blue"   x="812"  y="16" width="376" height="254" rx="14"/>
+    <rect class="blue"   x="1210" y="16" width="376" height="254" rx="14"/>
+    <rect class="blue"   x="1608" y="16" width="376" height="254" rx="14"/>
+  </g>
+  <text class="t30 corange" x="38" y="62">Occurrence records</text>
+  <text class="b24" x="38" y="108">species, user_id
+    <tspan x="38" dy="34">country, state_province</tspan>
+    <tspan x="38" dy="34">coordinates (optional)</tspan></text>
+
+  <text class="t30 cgrey" x="436" y="62">Checklists</text>
+  <text class="b24" x="436" y="108">WCVP v15: global,
+    <tspan x="436" dy="34">WGSRPD level-3 areas</tspan>
+    <tspan x="436" dy="34">VASCAN: Canada, provinces</tspan>
+    <tspan x="436" dy="34">Flora do Brasil: states</tspan></text>
+
+  <text class="t30 cblue" x="834" y="62">Name backbone</text>
+  <text class="b24" x="834" y="108"><tspan class="mono" font-size="22">TNRS_local()</tspan> on WCVP:
+    <tspan x="834" dy="34">names to accepted ids,</tspan>
+    <tspan x="834" dy="34">for checklists and queries</tspan></text>
+
+  <text class="t30 cblue" x="1232" y="62">Political divisions</text>
+  <text class="b24" x="1232" y="108">GNRS backbone: countries
+    <tspan x="1232" dy="34">and states, with GADM ids</tspan>
+    <tspan x="1232" dy="34">altdiv: other division</tspan>
+    <tspan x="1232" dy="34">systems → GADM units</tspan></text>
+
+  <text class="t30 cblue" x="1630" y="62">Geography</text>
+  <text class="b24" x="1630" y="108">WGSRPD level-3 raster,
+    <tspan x="1630" dy="34">built from rWCVPdata</tspan>
+    <tspan x="1630" dy="34">GADM unit index from GVS</tspan>
+    <tspan x="1630" dy="34">(raster + units table)</tspan></text>
+
+  <!-- arrows into row 2 -->
+  <line class="arrow" x1="204"  y1="270" x2="204"  y2="296"/>
+  <line class="arrow" x1="602"  y1="270" x2="602"  y2="296"/>
+  <line class="arrow" x1="1000" y1="270" x2="1000" y2="296"/>
+  <line class="arrow" x1="1398" y1="270" x2="1398" y2="296"/>
+  <line class="arrow" x1="1796" y1="270" x2="1796" y2="296"/>
+
+  <!-- ============================== row 2: the call, and the build ============================== -->
+  <rect class="orange" x="16" y="300" width="376" height="240" rx="14" stroke-width="3"/>
+  <text class="mono corange" x="38" y="346" font-size="24" font-weight="700">NSR_local(records, …)</text>
+  <text class="mono" x="38" y="394" font-size="20" fill="#222" xml:space="preserve">use_coordinates = FALSE</text>
+  <text class="mono" x="38" y="428" font-size="20" fill="#222" xml:space="preserve">resolve_names   = TRUE</text>
+  <text class="mono" x="38" y="462" font-size="20" fill="#222" xml:space="preserve">min_overlap     = 0.01</text>
+  <text class="mono" x="38" y="496" font-size="20" fill="#222" xml:space="preserve">exclude_extinct = TRUE</text>
+
+  <rect class="green" x="414" y="300" width="1570" height="240" rx="14" stroke-width="3"/>
+  <text class="cgreen" x="436" y="346" font-size="28" font-weight="700"><tspan class="mono" font-size="26">NSR_local_build()</tspan>  →  one cache, shared with GNRS and GVS</text>
+  <line x1="940"  y1="368" x2="940"  y2="524" stroke="#b9d6b5" stroke-width="2"/>
+  <line x1="1460" y1="368" x2="1460" y2="524" stroke="#b9d6b5" stroke-width="2"/>
+
+  <text class="h22 cgreen" x="436" y="392">Import</text>
+  <text class="mono tag" x="926" y="391" text-anchor="end">nsr_import_*()</text>
+  <text class="b21" x="436" y="426">one row per taxon × region × source
+    <tspan x="436" dy="28">native, introduced or present</tspan>
+    <tspan x="436" dy="28">subspecies rolled up to species</tspan>
+    <tspan x="436" dy="28">extinct kept, and flagged</tspan></text>
+
+  <text class="h22 cgreen" x="956" y="392">Link geographies</text>
+  <text class="mono tag" x="1446" y="391" text-anchor="end">nsr_build_region_links()</text>
+  <text class="b21" x="956" y="426">WGSRPD × GADM rasters, cell by cell
+    <tspan x="956" dy="28">same · within · contains · overlaps,</tspan>
+    <tspan x="956" dy="28">each with its overlap fraction</tspan>
+    <tspan x="956" dy="28">state → country: from the GADM key</tspan></text>
+
+  <text class="h22 cgreen" x="1476" y="392">Report reach</text>
+  <text class="mono tag" x="1966" y="391" text-anchor="end">NSR_local_status()</text>
+  <text class="b21" x="1476" y="426">each source: built, and reachable?
+    <tspan x="1476" dy="28">by name: GADM directly, WGSRPD</tspan>
+    <tspan x="1476" dy="28">only through the link table</tspan>
+    <tspan x="1476" dy="28">by coordinates: direct · crosswalk · none</tspan></text>
+
+  <!-- arrows into the chain -->
+  <line class="arrow" x1="204"  y1="540" x2="204"  y2="606"/>
+  <line class="arrow" x1="751"  y1="540" x2="751"  y2="606"/>
+  <line class="arrow" x1="1249" y1="540" x2="1249" y2="606"/>
+  <line class="arrow" x1="1747" y1="540" x2="1747" y2="606"/>
+  <text class="note" x="764"  y="580">divisions, rasters, links</text>
+  <text class="note" x="1262" y="580">checklist</text>
+  <text class="note" x="1760" y="580">coverage</text>
+
+  <!-- ============================== row 3: the chain ============================== -->
+  <g stroke-width="3">
+    <rect class="grey"   x="53"   y="610" width="400" height="76" rx="38"/>
+    <rect class="blue"   x="551"  y="610" width="400" height="76" rx="38"/>
+    <rect class="green"  x="1049" y="610" width="400" height="76" rx="38"/>
+    <rect class="orange" x="1547" y="610" width="400" height="76" rx="38"/>
+  </g>
+  <g font-size="26" font-weight="700" text-anchor="middle">
+    <text class="cgrey"   x="253"  y="657">1 · Resolve taxon</text>
+    <text class="cblue"   x="751"  y="657">2 · Locate place</text>
+    <text class="cgreen"  x="1249" y="657">3 · Gather opinions</text>
+    <text class="corange" x="1747" y="657">4 · Reduce to status</text>
+  </g>
+  <line class="arrow" x1="453"  y1="648" x2="545"  y2="648"/>
+  <line class="arrow" x1="951"  y1="648" x2="1043" y2="648"/>
+  <line class="arrow" x1="1449" y1="648" x2="1541" y2="648"/>
+
+  <g stroke="#9a9a9a" stroke-width="2" stroke-dasharray="6 6">
+    <line x1="253"  y1="686" x2="253"  y2="720"/>
+    <line x1="751"  y1="686" x2="751"  y2="720"/>
+    <line x1="1249" y1="686" x2="1249" y2="720"/>
+    <line x1="1747" y1="686" x2="1747" y2="720"/>
+  </g>
+
+  <!-- ============================== row 4: one panel per step ============================== -->
+  <!-- panel 1: taxon -->
+  <rect x="16" y="720" width="474" height="475" rx="14" fill="#ffffff"/>
+  <path d="M16,778 V734 Q16,720 30,720 H476 Q490,720 490,734 V778 Z" fill="#e6e6e3"/>
+  <rect x="16" y="720" width="474" height="475" rx="14" fill="none" stroke="#9a9a9a" stroke-width="3"/>
+  <text class="h25 cgrey" x="36" y="758">Resolve taxon</text>
+  <text class="mono tag" x="472" y="757" text-anchor="end">nsr_resolve_names()</text>
+  <text class="b21" x="38" y="812">• Exact match to a WCVP accepted name
+    <tspan x="38" dy="31">• Otherwise matched by <tspan class="mono" font-size="19">TNRS_local()</tspan>,</tspan>
+    <tspan x="60" dy="31">if <tspan class="mono" font-size="19">resolve_names = TRUE</tspan></tspan>
+    <tspan x="38" dy="31">• A bare genus is answered as a genus,</tspan>
+    <tspan x="60" dy="31">never as one of its species</tspan>
+    <tspan x="38" dy="31">• A subspecies' range already counts</tspan>
+    <tspan x="60" dy="31">for its species (rolled up at build)</tspan>
+    <tspan x="38" dy="31">• No match at all: UNK</tspan></text>
+  <rect x="34" y="1118" width="438" height="58" rx="8" fill="#e6e6e3"/>
+  <text class="cgrey" x="253" y="1154" font-size="21" font-weight="700" text-anchor="middle">No genus → species inference</text>
+
+  <!-- panel 2: place -->
+  <rect x="514" y="720" width="474" height="475" rx="14" fill="#ffffff"/>
+  <path d="M514,778 V734 Q514,720 528,720 H974 Q988,720 988,734 V778 Z" fill="#d9e4f5"/>
+  <rect x="514" y="720" width="474" height="475" rx="14" fill="none" stroke="#3f72b8" stroke-width="3"/>
+  <text class="h25 cblue" x="534" y="758">Locate place</text>
+  <text class="mono tag" x="970" y="757" text-anchor="end">nsr_query_regions()</text>
+  <text class="b21" x="536" y="812">• Names → GADM state and country,
+    <tspan x="558" dy="31">through the GNRS backbone</tspan>
+    <tspan x="536" dy="31">• Other division systems (fylker,</tspan>
+    <tspan x="558" dy="31">landskap) → the GADM units covered</tspan>
+    <tspan x="536" dy="31">• Coordinates, if <tspan class="mono" font-size="19">use_coordinates</tspan>:</tspan>
+    <tspan x="558" dy="31">each source's own geography</tspan>
+    <tspan x="536" dy="31">• Point and names disagree: neither</tspan>
+    <tspan x="558" dy="31">wins; each is answered on its own</tspan></text>
+  <rect x="532" y="1118" width="438" height="58" rx="8" fill="#d9e4f5"/>
+  <text class="cblue" x="751" y="1154" font-size="21" font-weight="700" text-anchor="middle">Compared, never pooled</text>
+
+  <!-- panel 3: opinions -->
+  <rect x="1012" y="720" width="474" height="475" rx="14" fill="#ffffff"/>
+  <path d="M1012,778 V734 Q1012,720 1026,720 H1472 Q1486,720 1486,734 V778 Z" fill="#d6ead3"/>
+  <rect x="1012" y="720" width="474" height="475" rx="14" fill="none" stroke="#4e9a4e" stroke-width="3"/>
+  <text class="h25 cgreen" x="1032" y="758">Gather opinions</text>
+  <text class="mono tag" x="1468" y="757" text-anchor="end">nsr_opinions_for()</text>
+  <text class="b21" x="1034" y="812">• The place's own polygons
+    <tspan x="1034" dy="31">• Its country: rows on that polygon,</tspan>
+    <tspan x="1056" dy="31">never on its other states</tspan>
+    <tspan x="1034" dy="31">• Polygons in other geographies,</tspan>
+    <tspan x="1056" dy="31">if overlap ≥ <tspan class="mono" font-size="19">min_overlap</tspan></tspan>
+    <tspan x="1034" dy="31">• Asked about a country: its states,</tspan>
+    <tspan x="1056" dy="31">by the GADM key (exact, no threshold)</tspan>
+    <tspan x="1034" dy="31">• Extinct records left out unless</tspan>
+    <tspan x="1056" dy="31"><tspan class="mono" font-size="19">exclude_extinct = FALSE</tspan></tspan></text>
+  <rect x="1030" y="1118" width="438" height="58" rx="8" fill="#d6ead3"/>
+  <text class="cgreen" x="1249" y="1154" font-size="21" font-weight="700" text-anchor="middle">Each source in its own geography</text>
+
+  <!-- panel 4: status -->
+  <rect x="1510" y="720" width="474" height="475" rx="14" fill="#ffffff"/>
+  <path d="M1510,778 V734 Q1510,720 1524,720 H1970 Q1984,720 1984,734 V778 Z" fill="#f6e3c2"/>
+  <rect x="1510" y="720" width="474" height="475" rx="14" fill="none" stroke="#c8902e" stroke-width="3"/>
+  <text class="h25 corange" x="1530" y="758">Reduce to status</text>
+  <text class="mono tag" x="1966" y="757" text-anchor="end">nsr_reduce()</text>
+  <text class="b21" x="1532" y="812">• Containing polygons decide:
+    <tspan x="1554" dy="31">any native → N, else I, else P</tspan>
+    <tspan x="1532" dy="31">• Polygons inside: only if unanimous,</tspan>
+    <tspan x="1554" dy="31">otherwise P ("status varies")</tspan>
+    <tspan x="1532" dy="31">• Partial overlaps alone → UNK</tspan>
+    <tspan x="1532" dy="31">• Nothing listed: A where a complete</tspan>
+    <tspan x="1554" dy="31">list covers the place and the taxon</tspan>
+    <tspan x="1554" dy="31">is known elsewhere, else UNK</tspan>
+    <tspan x="1532" dy="31">• Ne / Ie read the whole native range;</tspan>
+    <tspan x="1554" dy="31">a lost population is A, never Ie</tspan></text>
+  <rect x="1528" y="1118" width="438" height="58" rx="8" fill="#f6e3c2"/>
+  <text class="corange" x="1747" y="1154" font-size="21" font-weight="700" text-anchor="middle">Native wins; conflict is recorded</text>
+
+  <text x="1000" y="1236" font-size="20" font-style="italic" fill="#555" text-anchor="middle">Row path and set path (data.table, from 200 records on) give the same answer, tested column for column</text>
+
+  <!-- ============================== row 5: output ============================== -->
+  <rect x="16" y="1262" width="1968" height="365" rx="14" fill="#ffffff"/>
+  <path d="M16,1322 V1276 Q16,1262 30,1262 H1970 Q1984,1262 1984,1276 V1322 Z" fill="#e8ebf0"/>
+  <rect x="16" y="1262" width="1968" height="365" rx="14" fill="none" stroke="#4b5563" stroke-width="3"/>
+  <text class="cslate" x="38" y="1302" font-size="27" font-weight="700">Output: one row per record, carrying NSR()'s columns and the evidence behind them</text>
+  <text class="mono tag" x="1962" y="1301" text-anchor="end">NSR_local()</text>
+
+  <g fill="#f3f3f1" stroke="#bdbdbd" stroke-width="2">
+    <rect x="50"   y="1342" width="600" height="150" rx="10"/>
+    <rect x="700"  y="1342" width="600" height="150" rx="10"/>
+    <rect x="1350" y="1342" width="600" height="150" rx="10"/>
+  </g>
+  <g text-anchor="middle">
+    <text x="350"  y="1382" font-size="24" font-weight="700" fill="#333">Service columns</text>
+    <text class="b21" x="350" y="1416">native_status, per country and state
+      <tspan x="350" dy="29">reason · sources · isIntroduced</tspan>
+      <tspan x="350" dy="29">isCultivatedNSR · user_id</tspan></text>
+    <text x="1000" y="1382" font-size="24" font-weight="700" fill="#333">Evidence</text>
+    <text class="b21" x="1000" y="1416">native_status_opinions · scope
+      <tspan x="1000" dy="29">conflict, conflict_type</tspan>
+      <tspan x="1000" dy="29">sub-polygon counts · isEndemic</tspan></text>
+    <text x="1650" y="1382" font-size="24" font-weight="700" fill="#333">Diagnostics</text>
+    <text class="b21" x="1650" y="1416">regions_matched · place_conflict
+      <tspan x="1650" dy="29">status by coordinates and by names</tspan>
+      <tspan x="1650" dy="29">taxon_evaluable</tspan></text>
+  </g>
+
+  <text class="b21" x="1000" y="1544" text-anchor="middle" xml:space="preserve"><tspan font-weight="700">N</tspan> native   <tspan font-weight="700">Ne</tspan> native, endemic   <tspan font-weight="700">I</tspan> introduced   <tspan font-weight="700">Ie</tspan> introduced, inferred   <tspan font-weight="700">P</tspan> present   <tspan font-weight="700">A</tspan> absent   <tspan font-weight="700">UNK</tspan> no data</text>
+  <text x="1000" y="1594" font-size="19" font-style="italic" fill="#444" text-anchor="middle">Differences from NSR(): native wins where NSR() lets introduced win · genus and family endemism not yet used · county not resolved · coordinates and names never pooled · WCVP reported as wcvp</text>
+</svg>

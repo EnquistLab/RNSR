@@ -1,0 +1,242 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2000" height="1680" viewBox="0 0 2000 1680"
+     font-family="Helvetica Neue, Helvetica, Arial, sans-serif">
+  <title>How NSR() works, through the API</title>
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#555"/>
+    </marker>
+    <style>
+      .t30 { font-size: 30px; font-weight: 700; }
+      .b24 { font-size: 24px; fill: #222; }
+      .b21 { font-size: 21px; fill: #222; }
+      .h22 { font-size: 22px; font-weight: 700; }
+      .h25 { font-size: 25px; font-weight: 700; }
+      .mono { font-family: Menlo, Consolas, "DejaVu Sans Mono", monospace; }
+      .tag { font-size: 16px; fill: #6b7280; }
+      .arrow { stroke: #555; stroke-width: 3; fill: none; marker-end: url(#arr); }
+      .note { font-size: 18px; font-style: italic; fill: #555; }
+      .grey   { fill: #f3f3f1; stroke: #9a9a9a; }
+      .blue   { fill: #e9eff9; stroke: #3f72b8; }
+      .green  { fill: #e9f3e7; stroke: #4e9a4e; }
+      .orange { fill: #fbf1e0; stroke: #c8902e; }
+      .cgrey { fill: #333333; } .cblue { fill: #2b5a9b; } .cgreen { fill: #3a7a3a; }
+      .corange { fill: #94600c; } .cslate { fill: #2f3a4a; }
+    </style>
+  </defs>
+  <rect width="2000" height="1680" fill="#ffffff"/>
+
+  <!-- ============================== row 1: inputs ============================== -->
+  <g stroke-width="3">
+    <rect class="orange" x="16"   y="16" width="376" height="254" rx="14"/>
+    <rect class="grey"   x="414"  y="16" width="376" height="254" rx="14"/>
+    <rect class="blue"   x="812"  y="16" width="376" height="254" rx="14"/>
+    <rect class="blue"   x="1210" y="16" width="376" height="254" rx="14"/>
+    <rect class="grey"   x="1608" y="16" width="376" height="254" rx="14"/>
+  </g>
+  <text class="t30 corange" x="38" y="62">Occurrence records</text>
+  <text class="b24" x="38" y="108">species, country,
+    <tspan x="38" dy="34">state_province,</tspan>
+    <tspan x="38" dy="34">county_parish, user_id</tspan>
+    <tspan x="38" dy="34">in <tspan class="mono" font-size="21">NSR_template()</tspan> order</tspan></text>
+
+  <text class="t30 cgrey" x="436" y="62">Names</text>
+  <text class="b24" x="436" y="108">family down to forma,
+    <tspan x="436" dy="34">without authors</tspan>
+    <tspan x="436" dy="34">matched as written:</tspan>
+    <tspan x="436" dy="34">resolve with TNRS first</tspan></text>
+
+  <text class="t30 cblue" x="834" y="62">Political divisions</text>
+  <text class="b24" x="834" y="108">plain ASCII English
+    <tspan x="834" dy="34">(the Geonames standard)</tspan>
+    <tspan x="834" dy="34">not standardised by the</tspan>
+    <tspan x="834" dy="34">service: GNRS first</tspan></text>
+
+  <text class="t30 cblue" x="1232" y="62">Connection</text>
+  <text class="b24" x="1232" y="108"><tspan class="mono" font-size="21">nsrapi.xyz/nsr_wsb.php</tspan>
+    <tspan x="1232" dy="34">internet required,</tspan>
+    <tspan x="1232" dy="34">checked before each call</tspan>
+    <tspan x="1232" dy="34" class="mono" font-size="21">check_internet()</tspan></text>
+
+  <text class="t30 cgrey" x="1630" y="62">12 checklists</text>
+  <text class="b24" x="1630" y="108">powo, usda, vascan, flbr,
+    <tspan x="1630" dy="34">conosur, fwi, ipane, mab,</tspan>
+    <tspan x="1630" dy="34">mexico, newguinea,</tspan>
+    <tspan x="1630" dy="34">tropicos, weakley</tspan></text>
+
+  <!-- arrows into row 2 -->
+  <line class="arrow" x1="204"  y1="270" x2="204"  y2="296"/>
+  <line class="arrow" x1="602"  y1="270" x2="602"  y2="296"/>
+  <line class="arrow" x1="1000" y1="270" x2="1000" y2="296"/>
+  <line class="arrow" x1="1398" y1="270" x2="1398" y2="296"/>
+  <line class="arrow" x1="1796" y1="270" x2="1796" y2="296"/>
+
+  <!-- ============================== row 2: the call, and the service ============================== -->
+  <rect class="orange" x="16" y="300" width="376" height="240" rx="14" stroke-width="3"/>
+  <text class="mono corange" x="38" y="346" font-size="24" font-weight="700">NSR(records)</text>
+  <text class="mono" x="38" y="394" font-size="20" fill="#222" xml:space="preserve">NSR_simple(species,</text>
+  <text class="mono" x="38" y="428" font-size="20" fill="#222" xml:space="preserve">           country, ...)</text>
+  <text class="mono" x="38" y="462" font-size="20" fill="#6b7280" xml:space="preserve"># fills NSR_template()</text>
+  <text class="mono" x="38" y="496" font-size="20" fill="#6b7280" xml:space="preserve"># and calls NSR()</text>
+
+  <rect class="green" x="414" y="300" width="1570" height="240" rx="14" stroke-width="3"/>
+  <text class="cgreen" x="436" y="346" font-size="28" font-weight="700">The NSR service  →  one PHP endpoint over a compiled checklist database</text>
+  <line x1="940"  y1="368" x2="940"  y2="524" stroke="#b9d6b5" stroke-width="2"/>
+  <line x1="1460" y1="368" x2="1460" y2="524" stroke="#b9d6b5" stroke-width="2"/>
+
+  <text class="h22 cgreen" x="436" y="392">Database</text>
+  <text class="mono tag" x="926" y="391" text-anchor="end">nsr_db (server)</text>
+  <text class="b21" x="436" y="426">12 checklists, compiled in PHP
+    <tspan x="436" dy="28">division names standardised with</tspan>
+    <tspan x="436" dy="28">GNRS when the database was built</tspan>
+    <tspan x="436" dy="28">no published build to download</tspan></text>
+
+  <text class="h22 cgreen" x="956" y="392">Endpoint</text>
+  <text class="mono tag" x="1446" y="391" text-anchor="end">nsr_wsb.php</text>
+  <text class="b21" x="956" y="426">one POST, one JSON body: opts + data
+    <tspan x="956" dy="28"><tspan class="mono" font-size="19">mode = "resolve"</tspan> for records</tspan>
+    <tspan x="956" dy="28">other modes: sources, citations,</tspan>
+    <tspan x="956" dy="28">meta, dd, political divisions</tspan></text>
+
+  <text class="h22 cgreen" x="1476" y="392">Limits</text>
+  <text class="mono tag" x="1966" y="391" text-anchor="end">(server)</text>
+  <text class="b21" x="1476" y="426">up to 5,000 records per call
+    <tspan x="1476" dy="28">the client sends one call per table:</tspan>
+    <tspan x="1476" dy="28">no batching in <tspan class="mono" font-size="19">NSR()</tspan></tspan>
+    <tspan x="1476" dy="28">needs the internet and the server up</tspan></text>
+
+  <!-- arrows into the chain -->
+  <line class="arrow" x1="204"  y1="540" x2="204"  y2="606"/>
+  <line class="arrow" x1="751"  y1="540" x2="751"  y2="606"/>
+  <line class="arrow" x1="1249" y1="540" x2="1249" y2="606"/>
+  <text class="note" x="764"  y="580">endpoint</text>
+  <text class="note" x="1262" y="580">checklists</text>
+
+  <!-- ============================== row 3: the chain ============================== -->
+  <g stroke-width="3">
+    <rect class="grey"   x="53"   y="610" width="400" height="76" rx="38"/>
+    <rect class="blue"   x="551"  y="610" width="400" height="76" rx="38"/>
+    <rect class="green"  x="1049" y="610" width="400" height="76" rx="38"/>
+    <rect class="orange" x="1547" y="610" width="400" height="76" rx="38"/>
+  </g>
+  <g font-size="26" font-weight="700" text-anchor="middle">
+    <text class="cgrey"   x="253"  y="657">1 · Prepare request</text>
+    <text class="cblue"   x="751"  y="657">2 · Send to service</text>
+    <text class="cgreen"  x="1249" y="657">3 · Resolve on server</text>
+    <text class="corange" x="1747" y="657">4 · Reshape results</text>
+  </g>
+  <line class="arrow" x1="453"  y1="648" x2="545"  y2="648"/>
+  <line class="arrow" x1="951"  y1="648" x2="1043" y2="648"/>
+  <line class="arrow" x1="1449" y1="648" x2="1541" y2="648"/>
+  <text class="note" x="1000" y="604" text-anchor="middle">client → server</text>
+  <text class="note" x="1495" y="604" text-anchor="middle">server → client</text>
+
+  <g stroke="#9a9a9a" stroke-width="2" stroke-dasharray="6 6">
+    <line x1="253"  y1="686" x2="253"  y2="720"/>
+    <line x1="751"  y1="686" x2="751"  y2="720"/>
+    <line x1="1249" y1="686" x2="1249" y2="720"/>
+    <line x1="1747" y1="686" x2="1747" y2="720"/>
+  </g>
+
+  <!-- ============================== row 4: one panel per step ============================== -->
+  <!-- panel 1: prepare -->
+  <rect x="16" y="720" width="474" height="475" rx="14" fill="#ffffff"/>
+  <path d="M16,778 V734 Q16,720 30,720 H476 Q490,720 490,734 V778 Z" fill="#e6e6e3"/>
+  <rect x="16" y="720" width="474" height="475" rx="14" fill="none" stroke="#9a9a9a" stroke-width="3"/>
+  <text class="h25 cgrey" x="36" y="758">Prepare request</text>
+  <text class="mono tag" x="472" y="757" text-anchor="end">NSR()</text>
+  <text class="b21" x="38" y="812">• <tspan class="mono" font-size="19">NSR_simple()</tspan> builds the table with
+    <tspan x="60" dy="31"><tspan class="mono" font-size="19">NSR_template()</tspan> from vectors</tspan>
+    <tspan x="38" dy="31">• user_id filled 1…n when absent;</tspan>
+    <tspan x="60" dy="31">duplicates stop with an error</tspan>
+    <tspan x="38" dy="31">• Column names are dropped: the</tspan>
+    <tspan x="60" dy="31">server reads columns by position</tspan>
+    <tspan x="38" dy="31">• Names and divisions go as written,</tspan>
+    <tspan x="60" dy="31">with no standardising on either side</tspan></text>
+  <rect x="34" y="1118" width="438" height="58" rx="8" fill="#e6e6e3"/>
+  <text class="cgrey" x="253" y="1154" font-size="21" font-weight="700" text-anchor="middle">Column order is the contract</text>
+
+  <!-- panel 2: send -->
+  <rect x="514" y="720" width="474" height="475" rx="14" fill="#ffffff"/>
+  <path d="M514,778 V734 Q514,720 528,720 H974 Q988,720 988,734 V778 Z" fill="#d9e4f5"/>
+  <rect x="514" y="720" width="474" height="475" rx="14" fill="none" stroke="#3f72b8" stroke-width="3"/>
+  <text class="h25 cblue" x="534" y="758">Send to service</text>
+  <text class="mono tag" x="970" y="757" text-anchor="end">nsr_core()</text>
+  <text class="b21" x="536" y="812">• <tspan class="mono" font-size="19">check_internet()</tspan> first
+    <tspan x="536" dy="31">• POST to <tspan class="mono" font-size="19">nsr_wsb.php</tspan>:</tspan>
+    <tspan x="558" dy="31" class="mono" font-size="19">{"opts": {"mode": "resolve"},</tspan>
+    <tspan x="558" dy="31" class="mono" font-size="19"> "data": [the records]}</tspan>
+    <tspan x="536" dy="31">• The whole table in one call; the</tspan>
+    <tspan x="558" dy="31">server takes up to 5,000 records</tspan>
+    <tspan x="536" dy="31">• No connection, HTTP error or bad</tspan>
+    <tspan x="558" dy="31">JSON → a message and NULL</tspan></text>
+  <rect x="532" y="1118" width="438" height="58" rx="8" fill="#d9e4f5"/>
+  <text class="cblue" x="751" y="1154" font-size="21" font-weight="700" text-anchor="middle">Fails quietly, never with an error</text>
+
+  <!-- panel 3: resolve on the server -->
+  <rect x="1012" y="720" width="474" height="475" rx="14" fill="#ffffff"/>
+  <path d="M1012,778 V734 Q1012,720 1026,720 H1472 Q1486,720 1486,734 V778 Z" fill="#d6ead3"/>
+  <rect x="1012" y="720" width="474" height="475" rx="14" fill="none" stroke="#4e9a4e" stroke-width="3"/>
+  <text class="h25 cgreen" x="1032" y="758">Resolve on server</text>
+  <text class="mono tag" x="1468" y="757" text-anchor="end">(server)</text>
+  <text class="b21" x="1034" y="812">• Names matched as written: no
+    <tspan x="1056" dy="31">taxonomic propagation either way</tspan>
+    <tspan x="1034" dy="31">• Native moves up: county → state</tspan>
+    <tspan x="1056" dy="31">→ country</tspan>
+    <tspan x="1034" dy="31">• Introduced moves down: country →</tspan>
+    <tspan x="1056" dy="31">its states, and wins over native</tspan>
+    <tspan x="1034" dy="31">• Species, genus or family endemic</tspan>
+    <tspan x="1056" dy="31">elsewhere → Ie; endemic here → Ne</tspan>
+    <tspan x="1034" dy="31">• On none of the region's lists → A</tspan></text>
+  <rect x="1030" y="1118" width="438" height="58" rx="8" fill="#d6ead3"/>
+  <text class="cgreen" x="1249" y="1154" font-size="21" font-weight="700" text-anchor="middle">Status at the lowest division given</text>
+
+  <!-- panel 4: reshape -->
+  <rect x="1510" y="720" width="474" height="475" rx="14" fill="#ffffff"/>
+  <path d="M1510,778 V734 Q1510,720 1524,720 H1970 Q1984,720 1984,734 V778 Z" fill="#f6e3c2"/>
+  <rect x="1510" y="720" width="474" height="475" rx="14" fill="none" stroke="#c8902e" stroke-width="3"/>
+  <text class="h25 corange" x="1530" y="758">Reshape results</text>
+  <text class="mono tag" x="1966" y="757" text-anchor="end">NSR()</text>
+  <text class="b21" x="1532" y="812">• Fields come back as rows: transposed,
+    <tspan x="1554" dy="31">first row → column names</tspan>
+    <tspan x="1532" dy="31">• No country column → message, NULL</tspan>
+    <tspan x="1532" dy="31">• Rows put back in input order,</tspan>
+    <tspan x="1554" dy="31">matched on user_id</tspan>
+    <tspan x="1532" dy="31">• Every column arrives as character,</tspan>
+    <tspan x="1554" dy="31">from the transposed matrix</tspan></text>
+  <rect x="1528" y="1118" width="438" height="58" rx="8" fill="#f6e3c2"/>
+  <text class="corange" x="1747" y="1154" font-size="21" font-weight="700" text-anchor="middle">Returned in the order sent</text>
+
+  <text x="1000" y="1236" font-size="20" font-style="italic" fill="#555" text-anchor="middle">Steps 1, 2 and 4 run in R on your machine; step 3 runs on the NSR server, drawn here from its code where that differs from its README</text>
+
+  <!-- ============================== row 5: output ============================== -->
+  <rect x="16" y="1262" width="1968" height="400" rx="14" fill="#ffffff"/>
+  <path d="M16,1322 V1276 Q16,1262 30,1262 H1970 Q1984,1262 1984,1276 V1322 Z" fill="#e8ebf0"/>
+  <rect x="16" y="1262" width="1968" height="400" rx="14" fill="none" stroke="#4b5563" stroke-width="3"/>
+  <text class="cslate" x="38" y="1302" font-size="27" font-weight="700">Output: one row per record, the service's 18 columns</text>
+  <text class="mono tag" x="1962" y="1301" text-anchor="end">NSR()</text>
+
+  <g fill="#f3f3f1" stroke="#bdbdbd" stroke-width="2">
+    <rect x="50"   y="1342" width="600" height="150" rx="10"/>
+    <rect x="700"  y="1342" width="600" height="150" rx="10"/>
+    <rect x="1350" y="1342" width="600" height="150" rx="10"/>
+  </g>
+  <g text-anchor="middle">
+    <text x="350"  y="1382" font-size="24" font-weight="700" fill="#333">Taxon and place</text>
+    <text class="b21" x="350" y="1416">family · genus · species
+      <tspan x="350" dy="29">country · state_province · county_parish</tspan>
+      <tspan x="350" dy="29">poldiv_full · poldiv_type</tspan></text>
+    <text x="1000" y="1382" font-size="24" font-weight="700" fill="#333">Status</text>
+    <text class="b21" x="1000" y="1416">native status per country, state, county
+      <tspan x="1000" dy="29">native_status, at the lowest division</tspan>
+      <tspan x="1000" dy="29">native_status_reason · _sources</tspan></text>
+    <text x="1650" y="1382" font-size="24" font-weight="700" fill="#333">Flags</text>
+    <text class="b21" x="1650" y="1416">isIntroduced · isCultivatedNSR
+      <tspan x="1650" dy="29">is_cultivated_taxon</tspan>
+      <tspan x="1650" dy="29">user_id</tspan></text>
+  </g>
+
+  <text x="1000" y="1536" font-size="20" fill="#222" text-anchor="middle" xml:space="preserve"><tspan font-weight="700">N</tspan> native   <tspan font-weight="700">Ne</tspan> native, endemic   <tspan font-weight="700">I</tspan> introduced   <tspan font-weight="700">Ie</tspan> endemic elsewhere, so introduced   <tspan font-weight="700">P</tspan> listed, no status   <tspan font-weight="700">A</tspan> on no checklist for the region   <tspan font-weight="700">UNK</tspan> no checklist there</text>
+  <text x="1000" y="1574" font-size="20" fill="#444" text-anchor="middle">Other modes, same route: <tspan class="mono" font-size="18">NSR_metadata()  NSR_sources()  NSR_citations()  NSR_version()  NSR_data_dictionary()  NSR_political_divisions()</tspan></text>
+  <text x="1000" y="1608" font-size="20" fill="#444" text-anchor="middle"><tspan class="mono" font-size="18">NSR_from_coordinates()</tspan>: species and a point, sent to a separate /batch service and returned as the server sends it</text>
+  <text x="1000" y="1642" font-size="20" font-style="italic" fill="#444" text-anchor="middle">Known service behaviour: a taxon no checklist covers (a moss, say) comes back A rather than UNK · names and divisions must match the checklists' spellings</text>
+</svg>
