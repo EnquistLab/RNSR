@@ -52,4 +52,9 @@ comprehensive), \code{nsr-taxa} (one per taxon, keyed on the WCVP accepted id),
 \code{nsr-checklist} (one per taxon x region x source).  \code{nsr-region-links}, the
 spatial relations between geographies, is built too when the GADM index from GVS is in
 the cache.
+
+Answering by division name needs the GNRS backbone in the same cache, since names reach
+every source through GADM; build it with GNRS.  \code{vascan} and \code{flbr} need it
+to build at all.  A \code{wcvp}-only build does not, and without it answers by
+coordinates only - \code{NSR_local_status()} reports which.
 }

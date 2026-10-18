@@ -22,6 +22,11 @@
 #' spatial relations between geographies, is built too when the GADM index from GVS is in
 #' the cache.
 #'
+#' Answering by division name needs the GNRS backbone in the same cache, since names reach
+#' every source through GADM; build it with GNRS.  \code{vascan} and \code{flbr} need it
+#' to build at all.  A \code{wcvp}-only build does not, and without it answers by
+#' coordinates only - \code{NSR_local_status()} reports which.
+#'
 #' @param sources Which sources to build.  See \code{NSR_local_status()}.
 #' @param dir Cache directory, shared with GNRS and GVS.
 #' @param files Named list of local archives to read, e.g.
@@ -56,7 +61,11 @@ NSR_local_build <- function(sources = "wcvp",
     return(invisible(NSR_local_status(dir)))
   }
 
-  bb <- nsr_gnrs_backbone(dir)
+  # Only the importers that key on political divisions need the GNRS backbone; WCVP keys
+  # on WGSRPD areas and never reads it.  Requiring it anyway made the default wcvp-only
+  # build fail in a fresh cache.  Without it the cache cannot answer by division name -
+  # NSR_local_status() and the query-time warning say so - but it can by coordinates.
+  bb <- if (any(todo != "wcvp")) nsr_gnrs_backbone(dir) else NULL
   raw <- list()
   for (s in todo) {
     msg("Importing ", s, " ...")
@@ -198,7 +207,7 @@ NSR_local_build <- function(sources = "wcvp",
             "NSR_local_build(overwrite = TRUE).", call. = FALSE)
   }
   geo <- nsr_geography(dir)
-  incomplete <- "wgsrpd3" %in% systems && !(geo$raster && geo$links)
+  incomplete <- ("wgsrpd3" %in% systems && !(geo$raster && geo$links)) || !isTRUE(geo$backbone)
   msg("Built: ", format(nrow(checklist), big.mark = ","), " checklist records, ",
       format(nrow(taxa), big.mark = ","), " taxa, ", format(nrow(regions), big.mark = ","),
       " regions.",

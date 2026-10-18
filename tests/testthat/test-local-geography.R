@@ -241,3 +241,61 @@ test_that("the WCVP importer drops records with no area code", {
   expect_false(any(grepl(":(NA)?$", out$region_key)))
   expect_false("2" %in% out$taxon_id)                    # known only from an uncoded record
 })
+
+# A minimal WCVP archive, as Kew ships it: pipe-delimited CSVs in a zip.
+wcvp_archive <- function(dist, names) {
+  d <- file.path(tempdir(), paste0("wcvp-", as.integer(stats::runif(1, 1, 1e9))))
+  dir.create(d)
+  utils::write.table(dist, file.path(d, "wcvp_distribution.csv"), sep = "|", quote = FALSE,
+                     row.names = FALSE)
+  utils::write.table(names, file.path(d, "wcvp_names.csv"), sep = "|", quote = FALSE,
+                     row.names = FALSE)
+  z <- file.path(d, "wcvp.zip")
+  utils::zip(z, file.path(d, c("wcvp_distribution.csv", "wcvp_names.csv")), flags = "-j -q")
+  z
+}
+
+test_that("a wcvp-only build needs no GNRS backbone, and then answers by coordinates only", {
+  skip_if(!nzchar(Sys.which("zip")), "no zip program to build the test archive")
+  z <- wcvp_archive(
+    data.frame(plant_name_id = "1", area_code_l3 = "QUE", area = "Quebec", introduced = 0L,
+               extinct = 0L, location_doubtful = 0L),
+    data.frame(plant_name_id = "1", accepted_plant_name_id = "1", parent_plant_name_id = "",
+               taxon_name = "Gen one", taxon_rank = "Species", taxon_status = "Accepted",
+               family = "Fam", genus = "Gen"))
+  dir <- file.path(tempdir(), paste0("nsr-wcvp-only-", as.integer(stats::runif(1, 1, 1e9))))
+  dir.create(dir)
+  # stand-ins for the WGSRPD raster and index, so the build does not rasterize the world
+  file.create(NSR:::nsr_raster_path("wgsrpd3", dir), NSR:::nsr_raster_path("wgsrpd3_index", dir))
+  expect_false(NSR:::nsr_has_gnrs_backbone(dir))
+  s <- suppressWarnings(        # no GVS index either: warned about, not an error
+    NSR_local_build("wcvp", dir = dir, files = list(wcvp = z), quiet = TRUE))
+  w <- s[s$source == "wcvp", ]
+  expect_true(w$built)
+  expect_false(w$answers_by_name)
+  expect_true(w$answers_by_coordinates)
+})
+
+test_that("a name is indexed to its species, not to another rank that shares it", {
+  ix <- function(taxa, rows_for) {
+    NSR:::nsr_index_db(list(
+      sources = data.frame(source_name = "wcvp", is_comprehensive = TRUE, stringsAsFactors = FALSE),
+      taxa = taxa,
+      checklist = data.frame(taxon_id = rows_for, region_key = "wgsrpd3:QUE", status = "native",
+                             source_name = "wcvp", is_cultivated = 0L, is_extinct = 0L,
+                             stringsAsFactors = FALSE),
+      regions = data.frame(region_key = "wgsrpd3:QUE", region_name = "Quebec", system = "wgsrpd3",
+                           stringsAsFactors = FALSE),
+      links = data.frame(from_region = character(0), to_region = character(0),
+                         relation = character(0), fraction = numeric(0), stringsAsFactors = FALSE)
+    ))$name_index
+  }
+  taxa <- data.frame(taxon_id = c("v1", "s1"), species_name = "Gen spec", family = "Fam",
+                     genus = "Gen", rank = c("Variety", "Species"), stringsAsFactors = FALSE)
+  # only the variety has records: the name still means the species
+  expect_equal(ix(taxa, "v1")$taxon_id[ix(taxa, "v1")$species_name == "Gen spec"], "s1")
+  # among two species-rank rows, the one with records is chosen
+  taxa2 <- data.frame(taxon_id = c("s1", "s2"), species_name = "Gen spec", family = "Fam",
+                      genus = "Gen", rank = "Species", stringsAsFactors = FALSE)
+  expect_equal(ix(taxa2, "s2")$taxon_id[ix(taxa2, "s2")$species_name == "Gen spec"], "s2")
+})

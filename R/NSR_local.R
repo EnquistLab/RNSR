@@ -347,11 +347,15 @@ nsr_index_db <- function(db) {
   }
   # WCVP sometimes carries the same name at two ranks (a variety row also called
   # "Pinus ponderosa"), and only one of them holds the distributions: index names to the
-  # species-rank id, and among those to the one with opinions
+  # species-rank id, and among those to the one with opinions.  Rank comes FIRST: a query
+  # names a species, and a variety's records are not the species' - a variety native
+  # somewhere does make its species native there, but a variety introduced or absent says
+  # nothing about the species.  Records belong on the species by roll-up at build time
+  # (nsr_species_of()), not by borrowing at query time.
   tx <- db$taxa
   tx$is_species <- tolower(tx$rank) %in% c("species", "")
   tx$has_rows <- tx$taxon_id %in% db$checklist$taxon_id
-  tx <- tx[order(!tx$has_rows, !tx$is_species), , drop = FALSE]
+  tx <- tx[order(!tx$is_species, !tx$has_rows), , drop = FALSE]
   db$name_index <- tx[!duplicated(tx$species_name), c("species_name", "taxon_id")]
   db$chk_status <- db$checklist$status
   db$chk_source <- db$checklist$source_name
