@@ -229,7 +229,8 @@ For each row, after name and division resolution:
 1. Gather every checklist opinion for the taxon in the division (or a containing/contained one,
    per the political rule), from all built sources. Opinions recorded against a taxon's own
    infraspecifics are already part of it, having been rolled up at build time; opinions recorded
-   against a *higher* rank are not consulted (see "Higher ranks are not consulted", below).
+   against a *higher* rank are consulted only for the two claims that hold for every species in
+   it (see "Two sound downward inferences", below).
 2. Reduce to one status per political level. **Precedence (BM, 2026-09-18): if any source says
    native, the taxon is native there.** Native is the hardest claim for a checklist to make by
    accident, whereas "introduced" and "absent" are often an artefact of a list's scope or age. Where
@@ -520,7 +521,7 @@ and the database build lives in `db/` (`nsr_db` is now `nsr_db_retired`).
   lets native win (BM, 2026-09-18), so the two can differ wherever sources conflict.
 - `nsr_includes/check_observations.php` is marked "UNDER DEVELOPMENT" and nothing includes it.
 
-### Deferred: two sound downward inferences (BM, 2026-10-17)
+### Two sound downward inferences (BM, 2026-10-17; implemented 2026-10-18)
 
 Native-by-genus is declined because "a genus is native here" is existential - *some* species of it
 is - and says nothing about the species in hand. Two claims about a higher taxon are universal
@@ -537,9 +538,27 @@ instead, true of every species in it, and so they do carry down:
 2. **Genus or family endemic elsewhere -> species `Ie`**, as the service does. In WCVP, 2,500 of
    14,056 genera are native to a single WGSRPD area.
 
-**To be implemented once the open Copilot review on PR #1 is resolved**, in both resolver paths,
-with the row/set parity tests extended to cover them and the reason text naming the higher taxon
-that answered, as the service's does.
+**Implemented** in `R/local_higher.R`, after PR #1 merged. `nsr_apply_higher()` runs after the
+resolver, for rows it left at `A` or `UNK` with no opinion of their own, and asks *the same
+resolver* what the genus - then the family - is at the same place; the row and set paths
+therefore agree by construction. It carries down only:
+
+- an `I` from a polygon that is or contains the place, with no native sub-polygon - a genus
+  introduced in one province is not introduced in the whole country (the partial-coverage trap
+  from `6d2f887`);
+- an `Ie`, which for the genus requires what it requires for a species: the place wholly covered,
+  the genus on none of its lists, and the genus's native range confined elsewhere.
+
+A species' own record always wins; a genus native here lends nothing. The reason names the higher
+taxon ("its genus *Acacia* is introduced in this polygon"), `native_status_scope` is `genus` or
+`family`, and only `native_status` is inferred - the per-level codes stay the species' own
+records, as they do for endemism. A taxon resolved at query time but absent from the taxa table
+takes its genus from the first word of the submitted name. WCVP has no family-rank names, so with
+today's sources the family step only matters if a checklist records families.
+
+Not done: the service also calls a species `Ne` where its genus or family is endemic to the place.
+That is sound too - the species' native range then lies inside the place - but it was not part of
+this decision.
 
 ## Milestones
 

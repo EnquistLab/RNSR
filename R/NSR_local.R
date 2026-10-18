@@ -45,15 +45,19 @@
 #'
 #' \strong{Rank.}  A distribution recorded against an accepted infraspecific taxon counts
 #' for its species: a subspecies of \emph{X} native somewhere means \emph{X} is native
-#' there.  The reverse is not done.  A species with no opinion of its own is not given its
-#' genus's status, because a genus being native to a region says nothing about which of its
-#' species are - it is the introduced one as readily as the native one.  Such a species is
-#' \code{UNK}, or \code{A} where a comprehensive source covers the place;
-#' \code{taxon_evaluable} distinguishes them.  A genus \emph{query} is still answered
-#' directly, from the distributions WCVP records against genera.  The live service does not
-#' give a species its genus's status either: it uses higher ranks only for endemism, where a
-#' genus or family endemic elsewhere makes a species \code{Ie} - which \code{NSR_local()}
-#' does not yet do.
+#' there.  Downward, a genus (or family) speaks for a species only through claims true of
+#' every species in it, and only where the species has no record of its own bearing on the
+#' place.  A genus native to a region says nothing about which of its species are - it is
+#' the introduced one as readily as the native one - so it never makes a species native.
+#' But a genus introduced in a polygon that is or contains the place has no native species
+#' there, so the species is \code{I}; and a genus absent from the place's comprehensive
+#' lists, with its whole native range confined elsewhere, makes it \code{Ie}.  The reason
+#' names the higher taxon, and \code{native_status_scope} is \code{"genus"} or
+#' \code{"family"}.  Only \code{native_status} is inferred this way; the per-level codes
+#' are the species' own records.  A genus \emph{query} is answered directly, from the
+#' distributions WCVP records against genera.  The live service makes the second inference
+#' but not the first, and also calls a species \code{Ne} where its genus is endemic to the
+#' place, which \code{NSR_local()} does not.
 #'
 #' \strong{Which polygons answer.}  A place is judged by the polygons it lies IN.  An
 #' opinion about a polygon containing the place applies to it (POWO's finest statement
@@ -202,6 +206,8 @@ NSR_local <- function(occurrence_dataframe, dir = nsr_cache_dir(), resolve_names
     nsr_resolve_status_set(tid, pl, db, min_overlap, exclude_extinct) else
     nsr_resolve_status(tid, pl, db, min_overlap, exclude_extinct)
   res <- resolve(taxon_id, places)
+  # what the genus or family says, for species with no record of their own here
+  res <- nsr_apply_higher(res, taxon_id, places, resolve, db, name = species)
 
   # ---- records whose two statements of place disagree ---------------------------------
   # Neither basis is taken as authoritative, so the pooled answer - which drew on

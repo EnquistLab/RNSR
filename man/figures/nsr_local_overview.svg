@@ -149,9 +149,10 @@
     <tspan x="60" dy="31">never as one of its species</tspan>
     <tspan x="38" dy="31">• A subspecies' range already counts</tspan>
     <tspan x="60" dy="31">for its species (rolled up at build)</tspan>
-    <tspan x="38" dy="31">• No match at all: UNK</tspan></text>
+    <tspan x="38" dy="31">• No record here: genus introduced</tspan>
+    <tspan x="60" dy="31">here → I; endemic elsewhere → Ie</tspan></text>
   <rect x="34" y="1118" width="438" height="58" rx="8" fill="#e6e6e3"/>
-  <text class="cgrey" x="253" y="1154" font-size="21" font-weight="700" text-anchor="middle">No genus → species inference</text>
+  <text class="cgrey" x="253" y="1154" font-size="21" font-weight="700" text-anchor="middle">Only all-species claims carry down</text>
 
   <!-- panel 2: place -->
   <rect x="514" y="720" width="474" height="475" rx="14" fill="#ffffff"/>
@@ -237,5 +238,5 @@
   </g>
 
   <text class="b21" x="1000" y="1544" text-anchor="middle" xml:space="preserve"><tspan font-weight="700">N</tspan> native   <tspan font-weight="700">Ne</tspan> native, endemic   <tspan font-weight="700">I</tspan> introduced   <tspan font-weight="700">Ie</tspan> introduced, inferred   <tspan font-weight="700">P</tspan> present   <tspan font-weight="700">A</tspan> absent   <tspan font-weight="700">UNK</tspan> no data</text>
-  <text x="1000" y="1594" font-size="19" font-style="italic" fill="#444" text-anchor="middle">Differences from NSR(): native wins where NSR() lets introduced win · genus and family endemism not yet used · county not resolved · coordinates and names never pooled · WCVP reported as wcvp</text>
+  <text x="1000" y="1594" font-size="19" font-style="italic" fill="#444" text-anchor="middle">Differences from NSR(): native wins over introduced · a genus introduced here carries to its species · no Ne from an endemic genus · county not resolved · coordinates and names never pooled · WCVP reported as wcvp</text>
 </svg>

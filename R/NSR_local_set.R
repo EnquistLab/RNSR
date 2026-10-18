@@ -89,9 +89,10 @@ NSR_local_by_region <- function(taxon_id, region_keys, country_keys = NULL,
   db <- nsr_local_db(dir)
   clean <- function(z) { z <- z[!is.na(z) & nzchar(z)]; if (!length(z)) character(0) else z }
   places <- list(fine = lapply(region_keys, clean), country = lapply(country_keys, clean))
-  res <- if (!is.null(db$chk_dt))
-           nsr_resolve_status_set(as.character(taxon_id), places, db, min_overlap, exclude_extinct)
-         else nsr_resolve_status(as.character(taxon_id), places, db, min_overlap, exclude_extinct)
+  resolve <- function(tid, pl) if (!is.null(db$chk_dt))
+    nsr_resolve_status_set(as.character(tid), pl, db, min_overlap, exclude_extinct) else
+    nsr_resolve_status(as.character(tid), pl, db, min_overlap, exclude_extinct)
+  res <- nsr_apply_higher(resolve(taxon_id, places), as.character(taxon_id), places, resolve, db)
   data.frame(taxon_id = as.character(taxon_id),
              native_status_country = res$country_code,
              native_status_state_province = res$state_code,
