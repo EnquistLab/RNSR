@@ -63,7 +63,10 @@ nsr_altdiv_keys <- function(country_iso, name, dir) {
     # NSR's regions are countries and states; a county-level extent has nothing to map
     # onto yet, so it is skipped rather than answered at the wrong level
     if (!length(gid) || a$level[[k]] != 1L) next
-    out[[i]] <- paste0("gadm1:", gid)
+    # through nsr_key(), so a blank or missing gid in the extent table is dropped rather
+    # than becoming the key "gadm1:NA"
+    keys <- nsr_key("gadm1", gid)
+    out[[i]] <- keys[!is.na(keys)]
   }
   out
 }

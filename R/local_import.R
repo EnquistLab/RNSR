@@ -101,7 +101,11 @@ nsr_import_wcvp <- function(zip = NULL, bb, quiet = FALSE) {
     status = ifelse(flag(dist$location_doubtful), "present",
                     ifelse(flag(dist$introduced), "introduced", "native")),
     is_cultivated = 0L, is_extinct = as.integer(flag(dist$extinct)),
-    region_key = paste0("wgsrpd3:", dist$area_code_l3), region_name = dist$area,
+    # 1,329 WCVP v15 records have no area code: they say a taxon is native somewhere
+    # unknown, which is no use to a question about a place - and keyed with paste0() they
+    # would become one fake region "wgsrpd3:NA".  nsr_key() gives them NA, and the
+    # filter below drops them, so a taxon known only from such records is not evaluable.
+    region_key = nsr_key("wgsrpd3", dist$area_code_l3), region_name = dist$area,
     stringsAsFactors = FALSE
   )
   out[!is.na(out$region_key), , drop = FALSE]
@@ -177,8 +181,7 @@ nsr_import_vascan <- function(zip, bb, quiet = FALSE) {
   gid0[is.na(gid1) & loc == "greenland"] <- "GRL"
   out <- data.frame(taxon_name = di$taxon_name, taxon_id = NA_character_, status = status,
                     is_cultivated = 0L, is_extinct = 0L,
-                    region_key = ifelse(!is.na(gid1), paste0("gadm1:", gid1),
-                                        ifelse(!is.na(gid0), paste0("gadm0:", gid0), NA_character_)),
+                    region_key = nsr_key("gadm1", gid1, "gadm0", gid0),
                     region_name = di$locality, stringsAsFactors = FALSE)
   if (!quiet) {
     miss <- unique(di$locality[is.na(out$region_key)])
@@ -220,7 +223,7 @@ nsr_import_flbr <- function(zip, bb, quiet = FALSE) {
   out <- data.frame(
     taxon_name = di$taxon_name, taxon_id = NA_character_, status = status, is_cultivated = cult,
     is_extinct = 0L,
-    region_key = ifelse(is.na(bb$state$gid_1[k]), NA_character_, paste0("gadm1:", bb$state$gid_1[k])),
+    region_key = nsr_key("gadm1", bb$state$gid_1[k]),
     region_name = bb$state$state_province[k],
     stringsAsFactors = FALSE
   )

@@ -410,9 +410,11 @@ nsr_query_regions <- function(lon, lat, country, state, county, dir, db,
         bb$state$gid_1[match(pd$state_province_id[i], bb$state$state_province_id)] else NA_character_
       gid0 <- if (!is.na(pd0$country_id[i]))
         bb$country$gid_0[match(pd0$country_id[i], bb$country$country_id)] else NA_character_
-      if (!is.na(gid1)) kn <- c(kn, paste0("gadm1:", gid1))
-      if (is.na(gid1) && length(alt_keys[[i]])) kn <- c(kn, alt_keys[[i]])
-      if (!is.na(gid0)) kn <- c(kn, paste0("gadm0:", gid0))
+      k1 <- nsr_key("gadm1", gid1)
+      k0 <- nsr_key("gadm0", gid0)
+      if (!is.na(k1)) kn <- c(kn, k1)
+      if (is.na(k1) && length(alt_keys[[i]])) kn <- c(kn, alt_keys[[i]])
+      if (!is.na(k0)) kn <- c(kn, k0)
     }
     xy[[i]] <- kx
     nm[[i]] <- kn

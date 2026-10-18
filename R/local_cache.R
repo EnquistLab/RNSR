@@ -25,6 +25,27 @@ nsr_cache_dir <- function(create = FALSE) {
   dir
 }
 
+#' A region key, or NA where there is no code to key on
+#'
+#' Internal.  Every region key is \code{system:code}.  \code{paste0()} turns a missing
+#' code into the literal key \code{"wgsrpd3:NA"}, which no \code{is.na()} test downstream
+#' can catch, and which then behaves as a real region: WCVP holds 1,329 distribution
+#' records with no area code, which would all become one shared, comprehensively listed
+#' "area".  So keys are only ever built here.  Vectorised; a missing or blank code gives
+#' \code{NA}.  With two systems, the first that has a code wins - a GADM unit is keyed on
+#' its state where it has one, and on its country otherwise.
+#' @keywords internal
+#' @noRd
+nsr_key <- function(system, code, system2 = NULL, code2 = NULL) {
+  one <- function(s, x) {
+    x <- trimws(as.character(x))
+    ifelse(is.na(x) | !nzchar(x), NA_character_, paste0(s, ":", x))
+  }
+  k <- one(system, code)
+  if (!is.null(system2)) k <- ifelse(is.na(k), one(system2, code2), k)
+  k
+}
+
 #' Paths of the local NSR tables
 #' @keywords internal
 #' @noRd

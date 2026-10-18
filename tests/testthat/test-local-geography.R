@@ -208,3 +208,36 @@ test_that("an incomplete cache reports no reach either way", {
   expect_true(is.na(s$answers_by_coordinates))
   expect_true(is.na(s$coordinate_route))
 })
+
+test_that("region keys are never built from a missing code", {
+  expect_equal(NSR:::nsr_key("wgsrpd3", c("QUE", NA, "", "  ")),
+               c("wgsrpd3:QUE", NA, NA, NA))
+  # a GADM unit is keyed on its state where it has one, its country otherwise
+  expect_equal(NSR:::nsr_key("gadm1", c("CAN.11_1", NA, NA), "gadm0", c("CAN", "CAN", NA)),
+               c("gadm1:CAN.11_1", "gadm0:CAN", NA))
+})
+
+# WCVP v15 holds 1,329 distribution records with no area code.  Keyed with paste0() they
+# became one fake, comprehensively listed region "wgsrpd3:NA", and a taxon known only from
+# such records was evaluable - so it read as absent wherever a list applied, though WCVP
+# does not know where it grows.
+test_that("the WCVP importer drops records with no area code", {
+  skip_if(!nzchar(Sys.which("zip")), "no zip program to build the test archive")
+  d <- file.path(tempdir(), paste0("wcvp-", as.integer(stats::runif(1, 1, 1e9))))
+  dir.create(d)
+  utils::write.table(data.frame(
+      plant_name_id = c("1", "1", "2"), area_code_l3 = c("QUE", "", ""),
+      area = c("Quebec", "", ""), introduced = 0L, extinct = 0L, location_doubtful = 0L),
+    file.path(d, "wcvp_distribution.csv"), sep = "|", quote = FALSE, row.names = FALSE)
+  utils::write.table(data.frame(
+      plant_name_id = c("1", "2"), accepted_plant_name_id = c("1", "2"),
+      parent_plant_name_id = "", taxon_name = c("Gen one", "Gen two"), taxon_rank = "Species",
+      taxon_status = "Accepted", family = "Fam", genus = "Gen"),
+    file.path(d, "wcvp_names.csv"), sep = "|", quote = FALSE, row.names = FALSE)
+  z <- file.path(d, "wcvp.zip")
+  utils::zip(z, file.path(d, c("wcvp_distribution.csv", "wcvp_names.csv")), flags = "-j -q")
+  out <- NSR:::nsr_import_wcvp(z, bb = NULL, quiet = TRUE)
+  expect_equal(out$region_key, "wgsrpd3:QUE")          # one row: the coded record
+  expect_false(any(grepl(":(NA)?$", out$region_key)))
+  expect_false("2" %in% out$taxon_id)                    # known only from an uncoded record
+})

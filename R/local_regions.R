@@ -123,23 +123,22 @@ nsr_build_region_links <- function(dir = nsr_cache_dir(), gadm_raster = NULL, bl
   # region to name; pasting its NA code would key a link to "wgsrpd3:NA" or "gadm0:NA".
   wi <- match(d$w_unit, widx$unit)
   gi <- match(d$g_unit, units$unit)
-  keep <- !is.na(wi) & !is.na(gi)
+  # keyed through nsr_key(): a unit missing from its index, or one whose index row has no
+  # code, has no region to name, and pasting would key a link to "wgsrpd3:NA"/"gadm0:NA"
+  d$w_key <- nsr_key("wgsrpd3", widx$area_code_l3[wi])
+  d$g_key <- nsr_key("gadm1", units$gid_1[gi], "gadm0", units$gid_0[gi])
+  d$g_key0 <- nsr_key("gadm0", units$gid_0[gi])
+  keep <- !is.na(d$w_key) & !is.na(d$g_key) & !is.na(d$g_key0)
   if (!all(keep)) {
-    warning(sum(!keep), " raster cell group(s) carry units missing from their index and are ",
+    warning(sum(!keep), " raster cell group(s) carry units their index cannot name and are ",
             "left out of the link table; the raster and its index may be from different builds.",
             call. = FALSE)
   }
   d <- d[keep, , drop = FALSE]
-  wi <- wi[keep]
-  gi <- gi[keep]
-  d$w_key <- paste0("wgsrpd3:", widx$area_code_l3[wi])
-  d$g_key <- ifelse(!is.na(units$gid_1[gi]), paste0("gadm1:", units$gid_1[gi]),
-                    paste0("gadm0:", units$gid_0[gi]))
-  # A query about a country must find links too, so the level-0 pairs are built as well -
-  # but each level needs its own denominators. Pooling them counts every cell twice (once
-  # for its state, once for its country), which halves every fraction and turns even
-  # coextensive regions into "overlaps".
-  d$g_key0 <- paste0("gadm0:", units$gid_0[gi])
+  # A query about a country must find links too, so the level-0 pairs are built as well
+  # (g_key0, above) - but each level needs its own denominators. Pooling them counts every
+  # cell twice (once for its state, once for its country), which halves every fraction and
+  # turns even coextensive regions into "overlaps".
   fracs <- function(gk) {
     dd <- stats::aggregate(cells ~ w_key + g_key,
                            data = data.frame(w_key = d$w_key, g_key = gk, cells = d$cells,
@@ -225,18 +224,15 @@ nsr_locate_regions <- function(longitude, latitude, dir = nsr_cache_dir()) {
     widx <- as.data.frame(nanoparquet::read_parquet(nsr_raster_path("wgsrpd3_index", dir)))
     u <- as.integer(terra::extract(terra::rast(wf), xy)[, 1])
     wi <- match(u, widx$unit)    # NA for nodata, 0, and any unit the index does not hold
-    out$wgsrpd3[ok] <- ifelse(is.na(wi), NA_character_,
-                              paste0("wgsrpd3:", widx$area_code_l3[wi]))
+    out$wgsrpd3[ok] <- nsr_key("wgsrpd3", widx$area_code_l3[wi])
   }
   gi <- nsr_gadm_index(dir)
   if (nsr_has_gadm_index(dir)) {
     units <- as.data.frame(nanoparquet::read_parquet(gi[["units"]]))
     u <- as.integer(terra::extract(terra::rast(gi[["raster"]]), xy)[, 1])
     i <- match(u, units$unit)
-    out$gadm[ok] <- ifelse(is.na(i), NA_character_,
-                           ifelse(!is.na(units$gid_1[i]), paste0("gadm1:", units$gid_1[i]),
-                                  paste0("gadm0:", units$gid_0[i])))
-    out$gadm0[ok] <- ifelse(is.na(i), NA_character_, paste0("gadm0:", units$gid_0[i]))
+    out$gadm[ok] <- nsr_key("gadm1", units$gid_1[i], "gadm0", units$gid_0[i])
+    out$gadm0[ok] <- nsr_key("gadm0", units$gid_0[i])
   }
   out
 }
