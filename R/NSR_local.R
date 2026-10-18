@@ -205,9 +205,8 @@ NSR_local <- function(occurrence_dataframe, dir = nsr_cache_dir(), resolve_names
   resolve <- function(tid, pl) if (use_set)
     nsr_resolve_status_set(tid, pl, db, min_overlap, exclude_extinct) else
     nsr_resolve_status(tid, pl, db, min_overlap, exclude_extinct)
-  res <- resolve(taxon_id, places)
-  # what the genus or family says, for species with no record of their own here
-  res <- nsr_apply_higher(res, taxon_id, places, resolve, db, name = species)
+  # the taxon's own records, then what its genus or family says where it has none here
+  res <- nsr_answer(taxon_id, places, resolve, db, name = species)
 
   # ---- records whose two statements of place disagree ---------------------------------
   # Neither basis is taken as authoritative, so the pooled answer - which drew on
@@ -218,8 +217,9 @@ NSR_local <- function(occurrence_dataframe, dir = nsr_cache_dir(), resolve_names
   status_nm <- rep(NA_character_, n)
   cf <- places$conflict
   if (any(cf)) {
-    status_xy[cf] <- resolve(taxon_id[cf], nsr_split_keys(places$xy[cf]))$code
-    status_nm[cf] <- resolve(taxon_id[cf], nsr_split_keys(places$nm[cf]))$code
+    split <- nsr_split_answers(taxon_id, places, cf, resolve, db, species)
+    status_xy[cf] <- split$xy
+    status_nm[cf] <- split$nm
     res$code[cf] <- "UNK"
     res$reason[cf] <- paste0(
       "Coordinates and division names resolve to different places, so no single answer ",
@@ -467,6 +467,22 @@ nsr_places_agree <- function(kx, kn) {
     !length(a) || !length(b) || identical(sort(a), sort(b))
   }
   lvl("^gadm0:") && lvl("^gadm1:")
+}
+
+#' Answer each half of a split place on its own
+#'
+#' Internal.  For the rows whose coordinates and division names resolve to different
+#' places, the code each basis gives alone - through \code{nsr_answer()}, so with the same
+#' higher-rank inferences as any other answer.
+#' @return list of \code{xy} and \code{nm} codes, one per row of \code{cf}.
+#' @keywords internal
+#' @noRd
+nsr_split_answers <- function(taxon_id, places, cf, resolve, db, name = NULL) {
+  one <- function(keys) {
+    nsr_answer(taxon_id[cf], nsr_split_keys(keys[cf]), resolve, db,
+               if (is.null(name)) NULL else name[cf])$code
+  }
+  list(xy = one(places$xy), nm = one(places$nm))
 }
 
 #' Split a set of region keys into the finest level named and its country

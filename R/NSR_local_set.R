@@ -92,7 +92,7 @@ NSR_local_by_region <- function(taxon_id, region_keys, country_keys = NULL,
   resolve <- function(tid, pl) if (!is.null(db$chk_dt))
     nsr_resolve_status_set(as.character(tid), pl, db, min_overlap, exclude_extinct) else
     nsr_resolve_status(as.character(tid), pl, db, min_overlap, exclude_extinct)
-  res <- nsr_apply_higher(resolve(taxon_id, places), as.character(taxon_id), places, resolve, db)
+  res <- nsr_answer(as.character(taxon_id), places, resolve, db)
   data.frame(taxon_id = as.character(taxon_id),
              native_status_country = res$country_code,
              native_status_state_province = res$state_code,

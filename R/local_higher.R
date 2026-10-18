@@ -53,6 +53,17 @@ nsr_higher_ids <- function(taxon_id, db, name = NULL) {
              stringsAsFactors = FALSE)
 }
 
+#' The answer for a set of places: the taxon's own records, then its higher taxa
+#'
+#' Internal.  Every answer \code{NSR_local()} gives goes through here - the main one and
+#' both halves of a split place - so the higher-rank inferences cannot be applied to one
+#' and missed on another.
+#' @keywords internal
+#' @noRd
+nsr_answer <- function(taxon_id, places, resolve, db, name = NULL) {
+  nsr_apply_higher(resolve(taxon_id, places), taxon_id, places, resolve, db, name)
+}
+
 #' Apply the two sound downward inferences from genus, then family
 #'
 #' Internal.  For each row the resolver left at \code{A} or \code{UNK} with no opinion
@@ -94,6 +105,9 @@ nsr_apply_higher <- function(res, taxon_id, places, resolve, db, name = NULL) {
              ", so introduced here (inferred)"))
     res$scope[r] <- lvl
     res$sources[r] <- g$sources[hit]
+    # the evidence is the higher taxon's, so is any disagreement within it
+    res$conflict[r] <- g$conflict[hit]
+    res$conflict_type[r] <- g$conflict_type[hit]
     res$opinions[r] <- paste0(lvl, " ", nm, ": ",
                               ifelse(is.na(g$opinions[hit]), "none here", g$opinions[hit]))
     todo[r] <- FALSE

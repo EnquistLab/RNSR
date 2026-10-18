@@ -9,20 +9,23 @@ higher_db <- function() {
     "g_end   wgsrpd3:BZL      native      wcvp",   # Endemica: native only in Brazil S
     "g_nat   wgsrpd3:QUE      native      wcvp",   # Nativa: native in Quebec
     "s_own   wgsrpd3:QUE      native      wcvp",   # an Acacia with its own native record
-    "g_par   gadm1:CAN.11_1   introduced  vascan") # Partia: introduced in one province only
+    "g_par   gadm1:CAN.11_1   introduced  vascan", # Partia: introduced in one province only
+    "g_mix   wgsrpd3:QUE      introduced  wcvp",   # Mixta: introduced per WCVP...
+    "g_mix   gadm1:CAN.11_1   present     vascan") # ...merely present per VASCAN
   f <- do.call(rbind, strsplit(trimws(sub("#.*$", "", spec)), "[[:space:]]+"))
   checklist <- data.frame(taxon_id = f[, 1], region_key = f[, 2], status = f[, 3],
                           source_name = f[, 4], is_cultivated = 0L, is_extinct = 0L,
                           stringsAsFactors = FALSE)
   taxa <- data.frame(
-    taxon_id     = c("g_aca", "s_aca", "s_own", "g_end", "s_end", "g_nat", "s_nat", "g_par", "s_par"),
+    taxon_id     = c("g_aca", "s_aca", "s_own", "g_end", "s_end", "g_nat", "s_nat", "g_par", "s_par",
+                     "g_mix", "s_mix"),
     species_name = c("Acacia", "Acacia one", "Acacia two", "Endemica", "Endemica one",
-                     "Nativa", "Nativa one", "Partia", "Partia one"),
+                     "Nativa", "Nativa one", "Partia", "Partia one", "Mixta", "Mixta one"),
     genus        = c("Acacia", "Acacia", "Acacia", "Endemica", "Endemica",
-                     "Nativa", "Nativa", "Partia", "Partia"),
+                     "Nativa", "Nativa", "Partia", "Partia", "Mixta", "Mixta"),
     family       = "Fam",
     rank         = c("Genus", "Species", "Species", "Genus", "Species",
-                     "Genus", "Species", "Genus", "Species"),
+                     "Genus", "Species", "Genus", "Species", "Genus", "Species"),
     stringsAsFactors = FALSE)
   NSR:::nsr_index_db(list(
     sources = data.frame(source_name = c("wcvp", "vascan"), is_comprehensive = TRUE,
@@ -105,4 +108,29 @@ test_that("higher taxa are found from the taxa table, or from a submitted name",
   db <- higher_db()
   h <- NSR:::nsr_higher_ids(c("s_aca", "g_aca", "unknown"), db, name = c(NA, NA, "Acacia novel"))
   expect_equal(h$genus_id, c("g_aca", NA, "g_aca"))   # a genus is not its own genus
+})
+
+test_that("an inferred answer carries the higher taxon's disagreement with it", {
+  skip_if_not_installed("data.table")
+  # WCVP calls Mixta introduced in Quebec, VASCAN merely present: still no native opinion,
+  # so the species is I - but the sources did not agree, and that must show
+  for (r in answer("s_mix", quebec(), higher_db())) {
+    expect_equal(r$code, "I")
+    expect_true(r$conflict)
+    expect_equal(r$conflict_type, "sources")
+  }
+})
+
+test_that("each half of a split place gets the same inferences as any answer", {
+  skip_if_not_installed("data.table")
+  db <- higher_db()
+  # a record whose point is in Quebec and whose names say Brazil S
+  places <- list(xy = list("wgsrpd3:QUE"), nm = list("wgsrpd3:BZL"))
+  for (f in list(NSR:::nsr_resolve_status, NSR:::nsr_resolve_status_set)) {
+    resolve <- function(t, p) f(t, p, db)
+    s <- NSR:::nsr_split_answers("s_aca", places, TRUE, resolve, db)
+    # Acacia is introduced in Quebec: the coordinates' answer is I, not UNK
+    expect_equal(s$xy, "I")
+    expect_equal(s$nm, "UNK")
+  }
 })
