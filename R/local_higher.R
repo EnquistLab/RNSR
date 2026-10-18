@@ -60,8 +60,8 @@ nsr_higher_ids <- function(taxon_id, db, name = NULL) {
 #' and missed on another.
 #' @keywords internal
 #' @noRd
-nsr_answer <- function(taxon_id, places, resolve, db, name = NULL) {
-  nsr_apply_higher(resolve(taxon_id, places), taxon_id, places, resolve, db, name)
+nsr_answer <- function(taxon_id, places, resolve, db, name = NULL, min_overlap = 0.01) {
+  nsr_apply_higher(resolve(taxon_id, places), taxon_id, places, resolve, db, name, min_overlap)
 }
 
 #' Apply the two sound downward inferences from genus, then family
@@ -76,8 +76,23 @@ nsr_answer <- function(taxon_id, places, resolve, db, name = NULL) {
 #' @param resolve \code{function(taxon_id, places)} returning the resolver's list.
 #' @keywords internal
 #' @noRd
-nsr_apply_higher <- function(res, taxon_id, places, resolve, db, name = NULL) {
+nsr_apply_higher <- function(res, taxon_id, places, resolve, db, name = NULL,
+                             min_overlap = 0.01) {
   todo <- !is.na(taxon_id) & res$code %in% c("A", "UNK") & is.na(res$opinions)
+  if (!any(todo)) return(res)
+  # "No record of its own here" means no record at all - an extinct one included.  With
+  # exclude_extinct, a lost population has no opinions, and is A; it is still a record of
+  # the species here, and its genus must not turn "gone" into "introduced".
+  own <- vapply(which(todo), function(i) {
+    rws <- db$chk_idx_taxon[[as.character(taxon_id[i])]]
+    if (is.null(rws)) return(FALSE)
+    fine <- places$fine[[i]]
+    ctry <- places$country[[i]]
+    keys <- if (length(fine)) fine else ctry
+    here <- c(nsr_consulted_regions(keys, db, min_overlap), setdiff(ctry, keys))
+    any(db$chk_region[rws] %in% here)
+  }, logical(1))
+  todo[which(todo)[own]] <- FALSE
   if (!any(todo)) return(res)
   h <- nsr_higher_ids(taxon_id, db, name)
   for (lvl in c("genus", "family")) {
@@ -89,6 +104,12 @@ nsr_apply_higher <- function(res, taxon_id, places, resolve, db, name = NULL) {
     # introduced only in some sub-polygons is not introduced in the whole place
     intro <- g$code %in% "I" & g$scope %in% c("polygon", "containing polygon") &
       g$n_sub_native %in% 0L
+    # A place made of several polygons in one geography - a division from another system,
+    # spanning several GADM units - is introduced-for-the-genus only if every part is: one
+    # unit's list says nothing about the others.
+    intro[intro] <- nsr_every_part(rows[intro], hid, places, resolve, function(p) {
+      p$code %in% "I" & p$scope %in% c("polygon", "containing polygon") & p$n_sub_native %in% 0L
+    })
     endem <- g$code %in% "Ie"
     hit <- intro | endem
     if (!any(hit)) next
@@ -113,4 +134,34 @@ nsr_apply_higher <- function(res, taxon_id, places, resolve, db, name = NULL) {
     todo[r] <- FALSE
   }
   res
+}
+
+#' Does a test hold for every part of a place made of several polygons?
+#'
+#' Internal.  A place's keys in the same geography are its parts.  For rows whose place
+#' has such parts, resolves the taxon at each part alone and asks \code{test} of each;
+#' rows with a single polygon per geography pass through as TRUE.
+#' @return logical, one per element of \code{rows}.
+#' @keywords internal
+#' @noRd
+nsr_every_part <- function(rows, ids, places, resolve, test) {
+  ok <- rep(TRUE, length(rows))
+  if (!length(rows)) return(ok)
+  parts <- lapply(rows, function(i) {
+    fine <- places$fine[[i]]
+    k <- if (length(fine)) fine else places$country[[i]]
+    s <- sub(":.*", "", k)
+    k[s %in% s[duplicated(s)]]
+  })
+  multi <- which(lengths(parts) > 0)
+  if (!length(multi)) return(ok)
+  rr <- rep(rows[multi], lengths(parts[multi]))
+  pk <- unlist(parts[multi], use.names = FALSE)
+  in_fine <- vapply(seq_along(rr), function(j) length(places$fine[[rr[j]]]) > 0, logical(1))
+  pl <- list(fine = ifelse(in_fine, as.list(pk), list(character(0))),
+             country = ifelse(in_fine, places$country[rr], as.list(pk)))
+  pass <- test(resolve(ids[rr], pl))
+  each <- tapply(pass, rep(multi, lengths(parts[multi])), all)
+  ok[as.integer(names(each))] <- as.logical(each)
+  ok
 }

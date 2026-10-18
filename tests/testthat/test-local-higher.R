@@ -4,37 +4,45 @@
 
 higher_db <- function() {
   spec <- c(
-    # taxon      region_key        status      source   (comprehensive sources)
-    "g_aca   wgsrpd3:QUE      introduced  wcvp",   # Acacia: introduced in Quebec
-    "g_end   wgsrpd3:BZL      native      wcvp",   # Endemica: native only in Brazil S
-    "g_nat   wgsrpd3:QUE      native      wcvp",   # Nativa: native in Quebec
-    "s_own   wgsrpd3:QUE      native      wcvp",   # an Acacia with its own native record
-    "g_par   gadm1:CAN.11_1   introduced  vascan", # Partia: introduced in one province only
-    "g_mix   wgsrpd3:QUE      introduced  wcvp",   # Mixta: introduced per WCVP...
-    "g_mix   gadm1:CAN.11_1   present     vascan") # ...merely present per VASCAN
+    # taxon      region_key        status      source  extinct   (comprehensive sources)
+    "g_aca   wgsrpd3:QUE      introduced  wcvp    0",   # Acacia: introduced in Quebec
+    "g_end   wgsrpd3:BZL      native      wcvp    0",   # Endemica: native only in Brazil S
+    "g_nat   wgsrpd3:QUE      native      wcvp    0",   # Nativa: native in Quebec
+    "s_own   wgsrpd3:QUE      native      wcvp    0",   # an Acacia with its own native record
+    "g_par   gadm1:CAN.11_1   introduced  vascan  0",   # Partia: introduced in one province only
+    "g_mix   wgsrpd3:QUE      introduced  wcvp    0",   # Mixta: introduced per WCVP...
+    "g_mix   gadm1:CAN.11_1   present     vascan  0",   # ...merely present per VASCAN
+    "g_duo   gadm1:CAN.11_1   introduced  vascan  0",   # Duo: introduced in Quebec...
+    "g_duo   gadm1:CAN.4_1    introduced  vascan  0",   # ...and in New Brunswick
+    "s_lost  wgsrpd3:QUE      native      wcvp    1")   # an Endemica once native in Quebec
   f <- do.call(rbind, strsplit(trimws(sub("#.*$", "", spec)), "[[:space:]]+"))
   checklist <- data.frame(taxon_id = f[, 1], region_key = f[, 2], status = f[, 3],
-                          source_name = f[, 4], is_cultivated = 0L, is_extinct = 0L,
-                          stringsAsFactors = FALSE)
+                          source_name = f[, 4], is_cultivated = 0L,
+                          is_extinct = as.integer(f[, 5]), stringsAsFactors = FALSE)
   taxa <- data.frame(
     taxon_id     = c("g_aca", "s_aca", "s_own", "g_end", "s_end", "g_nat", "s_nat", "g_par", "s_par",
-                     "g_mix", "s_mix"),
+                     "g_mix", "s_mix", "g_duo", "s_duo", "s_lost"),
     species_name = c("Acacia", "Acacia one", "Acacia two", "Endemica", "Endemica one",
-                     "Nativa", "Nativa one", "Partia", "Partia one", "Mixta", "Mixta one"),
+                     "Nativa", "Nativa one", "Partia", "Partia one", "Mixta", "Mixta one",
+                     "Duo", "Duo one", "Endemica lost"),
     genus        = c("Acacia", "Acacia", "Acacia", "Endemica", "Endemica",
-                     "Nativa", "Nativa", "Partia", "Partia", "Mixta", "Mixta"),
+                     "Nativa", "Nativa", "Partia", "Partia", "Mixta", "Mixta",
+                     "Duo", "Duo", "Endemica"),
     family       = "Fam",
     rank         = c("Genus", "Species", "Species", "Genus", "Species",
-                     "Genus", "Species", "Genus", "Species", "Genus", "Species"),
+                     "Genus", "Species", "Genus", "Species", "Genus", "Species",
+                     "Genus", "Species", "Species"),
     stringsAsFactors = FALSE)
   NSR:::nsr_index_db(list(
     sources = data.frame(source_name = c("wcvp", "vascan"), is_comprehensive = TRUE,
                          stringsAsFactors = FALSE),
     taxa = taxa, checklist = checklist,
-    regions = data.frame(region_key = c("wgsrpd3:QUE", "wgsrpd3:BZL", "gadm1:CAN.11_1", "gadm0:CAN"),
-                         region_name = c("Quebec", "Brazil S", "Quebec", "Canada"),
-                         system = c("wgsrpd3", "wgsrpd3", "gadm1", "gadm0"),
-                         stringsAsFactors = FALSE),
+    regions = data.frame(
+      region_key = c("wgsrpd3:QUE", "wgsrpd3:BZL", "gadm1:CAN.11_1", "gadm1:CAN.4_1",
+                     "gadm1:CAN.9_1", "gadm0:CAN"),
+      region_name = c("Quebec", "Brazil S", "Quebec", "New Brunswick", "Ontario", "Canada"),
+      system = c("wgsrpd3", "wgsrpd3", "gadm1", "gadm1", "gadm1", "gadm0"),
+      stringsAsFactors = FALSE),
     links = data.frame(from_region = c("gadm1:CAN.11_1", "wgsrpd3:QUE"),
                        to_region = c("wgsrpd3:QUE", "gadm1:CAN.11_1"),
                        relation = "same", fraction = 0.99, stringsAsFactors = FALSE)))
@@ -133,4 +141,35 @@ test_that("each half of a split place gets the same inferences as any answer", {
     expect_equal(s$xy, "I")
     expect_equal(s$nm, "UNK")
   }
+})
+
+# A place can be several polygons in one geography: a division from another system (a
+# post-reform Norwegian county) spans several GADM units.  Those are its parts.
+two_units <- function(b) list(fine = list(c("gadm1:CAN.11_1", b)), country = list(character(0)))
+
+test_that("a genus introduced in one part of a place is not introduced in all of it", {
+  skip_if_not_installed("data.table")
+  db <- higher_db()
+  # Acacia: introduced in Quebec, unrecorded in New Brunswick
+  for (r in answer("s_aca", two_units("gadm1:CAN.4_1"), db)) expect_false(r$code %in% c("I", "Ie"))
+  # Duo: introduced in both
+  for (r in answer("s_duo", two_units("gadm1:CAN.4_1"), db)) expect_equal(r$code, "I")
+})
+
+test_that("a place of several parts is covered only when every part is", {
+  skip_if_not_installed("data.table")
+  db <- higher_db()
+  # Quebec is listed, Ontario (CAN.9_1) has no list at all: the place is not wholly
+  # covered, so Endemica is not absent from it, and its species is not Ie
+  for (r in answer("s_end", two_units("gadm1:CAN.9_1"), db)) expect_false(r$code %in% "Ie")
+  expect_false(NSR:::nsr_place_covered(c("gadm1:CAN.11_1", "gadm1:CAN.9_1"), character(0), db))
+  # two geographies for one place: either covered is enough
+  expect_true(NSR:::nsr_place_covered(c("wgsrpd3:QUE", "gadm1:CAN.9_1"), character(0), db))
+})
+
+test_that("a lost population stays A, whatever its genus", {
+  skip_if_not_installed("data.table")
+  # once native in Quebec (an extinct record), in a genus endemic to Brazil S: the
+  # record is the species' own, so its genus does not turn "gone" into "introduced"
+  for (r in answer("s_lost", quebec(), higher_db())) expect_equal(r$code, "A")
 })

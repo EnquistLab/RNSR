@@ -206,7 +206,7 @@ NSR_local <- function(occurrence_dataframe, dir = nsr_cache_dir(), resolve_names
     nsr_resolve_status_set(tid, pl, db, min_overlap, exclude_extinct) else
     nsr_resolve_status(tid, pl, db, min_overlap, exclude_extinct)
   # the taxon's own records, then what its genus or family says where it has none here
-  res <- nsr_answer(taxon_id, places, resolve, db, name = species)
+  res <- nsr_answer(taxon_id, places, resolve, db, name = species, min_overlap = min_overlap)
 
   # ---- records whose two statements of place disagree ---------------------------------
   # Neither basis is taken as authoritative, so the pooled answer - which drew on
@@ -217,7 +217,7 @@ NSR_local <- function(occurrence_dataframe, dir = nsr_cache_dir(), resolve_names
   status_nm <- rep(NA_character_, n)
   cf <- places$conflict
   if (any(cf)) {
-    split <- nsr_split_answers(taxon_id, places, cf, resolve, db, species)
+    split <- nsr_split_answers(taxon_id, places, cf, resolve, db, species, min_overlap)
     status_xy[cf] <- split$xy
     status_nm[cf] <- split$nm
     res$code[cf] <- "UNK"
@@ -477,10 +477,11 @@ nsr_places_agree <- function(kx, kn) {
 #' @return list of \code{xy} and \code{nm} codes, one per row of \code{cf}.
 #' @keywords internal
 #' @noRd
-nsr_split_answers <- function(taxon_id, places, cf, resolve, db, name = NULL) {
+nsr_split_answers <- function(taxon_id, places, cf, resolve, db, name = NULL,
+                              min_overlap = 0.01) {
   one <- function(keys) {
     nsr_answer(taxon_id[cf], nsr_split_keys(keys[cf]), resolve, db,
-               if (is.null(name)) NULL else name[cf])$code
+               if (is.null(name)) NULL else name[cf], min_overlap)$code
   }
   list(xy = one(places$xy), nm = one(places$nm))
 }
@@ -752,26 +753,34 @@ nsr_consulted_regions <- function(keys, db, min_overlap = 0.01) {
 #'     as several WGSRPD areas (Brazil, Canada, the USA) is covered.
 #' }
 #' A country's GADM states carry no fractions, so they cannot add up to the country; the
-#' country is then covered through WGSRPD, or not at all.  Links are never followed into a
+#' country is then covered through WGSRPD, or not at all.  A place made of several polygons
+#' in one geography - a division from another system, spanning several GADM units - is
+#' covered only when each of them is.  Links are never followed into a
 #' geography the place already holds.  \code{whole} is the link builder's threshold for
 #' "the same place", 0.95, which absorbs the mismatch between two independent coastlines.
 #' @return TRUE or FALSE.
 #' @keywords internal
 #' @noRd
 nsr_place_covered <- function(keys, anc = character(0), db, min_overlap = 0.01, whole = 0.95) {
-  if (any(c(keys, anc) %in% db$covered)) return(TRUE)
+  if (any(anc %in% db$covered)) return(TRUE)
+  if (!length(keys)) return(FALSE)
   known <- unique(sub(":.*", "", keys))
-  for (k in keys) {
+  one <- function(k) {
+    if (k %in% db$covered) return(TRUE)
     li <- db$link_env[[k]]
-    if (is.null(li)) next
+    if (is.null(li)) return(FALSE)
     to <- db$link_to[li]
     rel <- db$link_rel[li]
     fr <- db$link_frac[li]
     ok <- fr >= min_overlap & !(sub(":.*", "", to) %in% known) & to %in% db$covered
-    if (any(ok & rel %in% c("same", "within"))) return(TRUE)
-    if (sum(fr[ok & rel == "contains"]) >= whole) return(TRUE)
+    any(ok & rel %in% c("same", "within")) || sum(fr[ok & rel == "contains"]) >= whole
   }
-  FALSE
+  # Keys in different geographies describe the same place - a point's WGSRPD area and its
+  # GADM state - so any one of them covered covers it.  Keys in the SAME geography are
+  # parts of it - the GADM units a division from another system spans - so every part
+  # must be covered: absence from one unit's list is not absence from the others.
+  cov <- vapply(keys, one, logical(1))
+  any(tapply(cov, sub(":.*", "", keys), all))
 }
 
 #' What kind of disagreement is this?
