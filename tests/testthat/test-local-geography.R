@@ -308,3 +308,46 @@ test_that("a cache directory passed as dir is created", {
   expect_error(NSR_local_build("vascan", dir = dir, quiet = TRUE), "GNRS backbone")
   expect_true(dir.exists(dir))
 })
+
+# Two ten-cell rasters on one grid: WGSRPD unit 1 (QUE) throughout; GADM unit 1 (Quebec)
+# in nine cells and unit 2 - which the units table does not hold - in the tenth.
+link_fixture <- function(units) {
+  dir <- file.path(tempdir(), paste0("nsr-links-", as.integer(stats::runif(1, 1, 1e9))))
+  dir.create(dir)
+  grid <- function(v) {
+    r <- terra::rast(terra::ext(0, 10, 0, 1), nrows = 1, ncols = 10, crs = "EPSG:4326")
+    terra::values(r) <- as.integer(v)
+    r
+  }
+  terra::writeRaster(grid(rep(1, 10)), NSR:::nsr_raster_path("wgsrpd3", dir), overwrite = TRUE)
+  nanoparquet::write_parquet(
+    data.frame(unit = 1L, area_code_l3 = "QUE", area_name = "Quebec", stringsAsFactors = FALSE),
+    NSR:::nsr_raster_path("wgsrpd3_index", dir), compression = "gzip")
+  idx <- NSR:::nsr_gadm_index(dir)
+  terra::writeRaster(grid(c(rep(1, 9), 2)), idx[["raster"]], overwrite = TRUE)
+  nanoparquet::write_parquet(units, idx[["units"]], compression = "gzip")
+  dir
+}
+
+test_that("cells the index cannot name still count in their region's total", {
+  skip_if_not_installed("terra")
+  dir <- link_fixture(data.frame(unit = 1L, gid_0 = "CAN", gid_1 = "CAN.11_1",
+                                 stringsAsFactors = FALSE))
+  lk <- expect_warning(NSR:::nsr_build_region_links(dir, quiet = TRUE), "cannot name")
+  q <- lk[lk$from_region == "wgsrpd3:QUE" & lk$to_region == "gadm1:CAN.11_1", ]
+  # 9 of QUE's 10 cells: not the whole of it, so not "same"
+  expect_equal(q$fraction, 0.9)
+  expect_equal(q$relation, "contains")
+  # while all of Quebec-the-state lies in QUE
+  s <- lk[lk$from_region == "gadm1:CAN.11_1" & lk$to_region == "wgsrpd3:QUE", ]
+  expect_equal(s$fraction, 1)
+  expect_equal(s$relation, "within")
+})
+
+test_that("a raster its index cannot name at all is an error, said plainly", {
+  skip_if_not_installed("terra")
+  dir <- link_fixture(data.frame(unit = 99L, gid_0 = "XXX", gid_1 = NA_character_,
+                                 stringsAsFactors = FALSE))
+  expect_error(suppressWarnings(NSR:::nsr_build_region_links(dir, quiet = TRUE)),
+               "could be named")
+})

@@ -134,19 +134,34 @@ nsr_build_region_links <- function(dir = nsr_cache_dir(), gadm_raster = NULL, bl
             "left out of the link table; the raster and its index may be from different builds.",
             call. = FALSE)
   }
+  # Every unit's total is taken over ALL its overlapping cells, before anything is dropped.
+  # A cell group its index cannot name loses its numerator, never its share of the total:
+  # otherwise a WGSRPD area 10% of whose cells cannot be named is renormalised to 100%, its
+  # surviving link reads as "same", and coverage looks complete where part of it is unknown.
+  w_tot <- tapply(d$cells, d$w_unit, sum)
+  g_tot <- tapply(d$cells, d$g_unit, sum)
   d <- d[keep, , drop = FALSE]
+  if (!nrow(d)) {
+    stop("No raster cell group could be named from its index: the rasters and their index ",
+         "tables do not match. Rebuild the WGSRPD raster, or GVS's GADM index.", call. = FALSE)
+  }
   # A query about a country must find links too, so the level-0 pairs are built as well
   # (g_key0, above) - but each level needs its own denominators. Pooling them counts every
   # cell twice (once for its state, once for its country), which halves every fraction and
-  # turns even coextensive regions into "overlaps".
+  # turns even coextensive regions into "overlaps".  A key's total is the sum of its units'
+  # totals - a country's, its states' - each unit counted once.
+  key_tot <- function(unit, key, tot) {
+    u <- unique(data.frame(unit = unit, key = key, stringsAsFactors = FALSE))
+    tapply(as.numeric(tot[as.character(u$unit)]), u$key, sum)
+  }
+  wk_tot <- key_tot(d$w_unit, d$w_key, w_tot)
   fracs <- function(gk) {
     dd <- stats::aggregate(cells ~ w_key + g_key,
                            data = data.frame(w_key = d$w_key, g_key = gk, cells = d$cells,
                                              stringsAsFactors = FALSE), FUN = sum)
-    wt <- stats::aggregate(cells ~ w_key, data = dd, FUN = sum)
-    gt <- stats::aggregate(cells ~ g_key, data = dd, FUN = sum)
-    dd$frac_w <- dd$cells / wt$cells[match(dd$w_key, wt$w_key)]
-    dd$frac_g <- dd$cells / gt$cells[match(dd$g_key, gt$g_key)]
+    gk_tot <- key_tot(d$g_unit, gk, g_tot)
+    dd$frac_w <- dd$cells / as.numeric(wk_tot[dd$w_key])
+    dd$frac_g <- dd$cells / as.numeric(gk_tot[dd$g_key])
     dd
   }
   d <- rbind(fracs(d$g_key), fracs(d$g_key0))
