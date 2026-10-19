@@ -137,8 +137,12 @@ nsr_species_of <- function(ids, nm, max_steps = 3L) {
 #' @noRd
 nsr_find_wcvp_zip <- function() {
   if (!requireNamespace("TNRS", quietly = TRUE)) return(NULL)
-  d <- try(TNRS:::tnrs_cache_dir(), silent = TRUE)
-  if (inherits(d, "try-error") || !dir.exists(d)) return(NULL)
+  # TNRS's own rule for its cache directory (its tnrs_cache_dir(), which isn't exported)
+  d <- getOption("TNRS.cache_dir")
+  if (is.null(d) && !is.null(getNamespace("tools")[["R_user_dir"]])) {
+    d <- tools::R_user_dir("TNRS", which = "cache")
+  }
+  if (is.null(d) || !dir.exists(d)) return(NULL)
   f <- list.files(d, pattern = "^wcvp.*\\.zip$", full.names = TRUE)
   if (!length(f)) NULL else f[order(file.mtime(f), decreasing = TRUE)][1]
 }

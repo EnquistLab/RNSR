@@ -29,6 +29,12 @@ CRAN; it is available from the repository given in Additional_repositories, and 
 used only conditionally, through requireNamespace(). We dropped rWCVP from Suggests,
 since it has been archived on CRAN.
 
+NSR_local_build() resolves names with TNRS_local(), which TNRS (Suggests) adds in
+version 0.4.0; CRAN currently has 0.3.6. The function is looked up at run time, after
+checking that the installed TNRS exports it, and an informative error says which
+version is needed if it doesn't. The package installs and passes R CMD check with
+TNRS 0.3.6, and nothing outside the offline build uses TNRS.
+
 ## Test environments
 
 * local Windows 11 x64, R 4.4.1
