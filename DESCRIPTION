@@ -28,7 +28,6 @@ Suggests:
         terra,
         testthat,
         devtools,
-        BIEN,
         TNRS,
         vcr (>= 0.6.0),
         withr
