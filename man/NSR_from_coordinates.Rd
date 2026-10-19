@@ -12,10 +12,19 @@ NSR_from_coordinates(occurrence_dataframe, ...)
 \item{...}{Additional arguments passed to internal functions.}
 }
 \value{
-Dataframe containing NSR results.
+Dataframe containing NSR results, or \code{NULL} with a message if the service
+  cannot be reached or does not return results.
 }
 \description{
 NSR returns information on native status for species based on their latitude and longitude.
+}
+\details{
+The coordinates service is separate from the main NSR API.  Its address can be
+  changed without a new package release by setting
+  \code{options(NSR.coordinates_url = "https://...")}; the request is sent to that
+  address followed by \code{/batch}.  Like the package's other API functions, this one
+  does not stop with an error when the service is unavailable: it reports the problem
+  in a message and returns \code{NULL}.
 }
 \examples{
 \dontrun{

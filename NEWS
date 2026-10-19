@@ -30,6 +30,10 @@
   records per call.  Larger inputs are now sent in batches of up to 5,000 and the
   results recombined in input order; if any batch fails, NSR() returns NULL with a
   message, as it does for a single failed request.
+* NSR_from_coordinates() stopped with an R error when its service was unavailable - it
+  passed the server's HTML error page to the JSON parser.  It now reports the problem in
+  a message and returns NULL, like the package's other API functions.  Its address can be
+  changed without a release with options(NSR.coordinates_url = "https://...").
 
 ===============
 # NSR 0.1.0
