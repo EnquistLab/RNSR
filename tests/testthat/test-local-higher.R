@@ -16,7 +16,8 @@ higher_db <- function() {
     "g_duo   gadm1:CAN.4_1    introduced  vascan  0",   # ...and in New Brunswick
     "s_lost  wgsrpd3:QUE      native      wcvp    1",   # an Endemica once native in Quebec
     "f_int   wgsrpd3:QUE      introduced  wcvp    0",   # family Introfam: introduced in Quebec
-    "f_end   wgsrpd3:BZL      native      wcvp    0")   # family Endfam: native only in Brazil S
+    "f_end   wgsrpd3:BZL      native      wcvp    0",   # family Endfam: native only in Brazil S
+    "s_ovl   wgsrpd3:ONT      introduced  wcvp    1")   # an Acacia, extinct in an overlapping area
   f <- do.call(rbind, strsplit(trimws(sub("#.*$", "", spec)), "[[:space:]]+"))
   checklist <- data.frame(taxon_id = f[, 1], region_key = f[, 2], status = f[, 3],
                           source_name = f[, 4], is_cultivated = 0L,
@@ -38,11 +39,12 @@ higher_db <- function() {
   # family-rank taxa, and species that reach them: two through genera the cache does not
   # hold, one through Acacia, whose genus answers first
   taxa <- rbind(taxa, data.frame(
-    taxon_id     = c("f_int", "f_end", "s_fi", "s_fe", "s_both"),
-    species_name = c("Introfam", "Endfam", "Plainus one", "Plainia one", "Acacia three"),
-    genus        = c(NA, NA, "Plainus", "Plainia", "Acacia"),
-    family       = c("Introfam", "Endfam", "Introfam", "Endfam", "Endfam"),
-    rank         = c("Family", "Family", "Species", "Species", "Species"),
+    taxon_id     = c("f_int", "f_end", "s_fi", "s_fe", "s_both", "s_ovl"),
+    species_name = c("Introfam", "Endfam", "Plainus one", "Plainia one", "Acacia three",
+                     "Acacia four"),
+    genus        = c(NA, NA, "Plainus", "Plainia", "Acacia", "Acacia"),
+    family       = c("Introfam", "Endfam", "Introfam", "Endfam", "Endfam", "Fam"),
+    rank         = c("Family", "Family", "Species", "Species", "Species", "Species"),
     stringsAsFactors = FALSE))
   NSR:::nsr_index_db(list(
     sources = data.frame(source_name = c("wcvp", "vascan"), is_comprehensive = TRUE,
@@ -50,13 +52,16 @@ higher_db <- function() {
     taxa = taxa, checklist = checklist,
     regions = data.frame(
       region_key = c("wgsrpd3:QUE", "wgsrpd3:BZL", "gadm1:CAN.11_1", "gadm1:CAN.4_1",
-                     "gadm1:CAN.9_1", "gadm0:CAN"),
-      region_name = c("Quebec", "Brazil S", "Quebec", "New Brunswick", "Ontario", "Canada"),
-      system = c("wgsrpd3", "wgsrpd3", "gadm1", "gadm1", "gadm1", "gadm0"),
+                     "gadm1:CAN.9_1", "gadm0:CAN", "wgsrpd3:ONT"),
+      region_name = c("Quebec", "Brazil S", "Quebec", "New Brunswick", "Ontario", "Canada",
+                      "Ontario"),
+      system = c("wgsrpd3", "wgsrpd3", "gadm1", "gadm1", "gadm1", "gadm0", "wgsrpd3"),
       stringsAsFactors = FALSE),
-    links = data.frame(from_region = c("gadm1:CAN.11_1", "wgsrpd3:QUE"),
-                       to_region = c("wgsrpd3:QUE", "gadm1:CAN.11_1"),
-                       relation = "same", fraction = 0.99, stringsAsFactors = FALSE)))
+    # Quebec-the-state is QUE, and also overlaps a little of WGSRPD's ONT
+    links = data.frame(from_region = c("gadm1:CAN.11_1", "wgsrpd3:QUE", "gadm1:CAN.11_1"),
+                       to_region = c("wgsrpd3:QUE", "gadm1:CAN.11_1", "wgsrpd3:ONT"),
+                       relation = c("same", "same", "overlaps"),
+                       fraction = c(0.99, 0.99, 0.2), stringsAsFactors = FALSE)))
 }
 
 # both resolvers, through the same apply step NSR_local() and NSR_local_by_region() use
@@ -211,5 +216,16 @@ test_that("the genus answers before the family", {
   for (r in answer("s_both", quebec(), higher_db())) {
     expect_equal(r$code, "I")
     expect_equal(r$scope, "genus")
+  }
+})
+
+test_that("a record on a polygon overlapping the place is the species' own, extinct or not", {
+  skip_if_not_installed("data.table")
+  # Acacia four has an extinct introduced record in ONT, which overlaps Quebec; with
+  # exclude_extinct it gives no opinion, but it is still the species' own record bearing
+  # on the place, so Acacia's introduced status is not carried down to it
+  for (r in answer("s_ovl", quebec(), higher_db())) {
+    expect_false(identical(r$scope, "genus"))
+    expect_equal(r$code, "A")
   }
 })

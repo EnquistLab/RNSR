@@ -91,15 +91,18 @@ nsr_apply_higher <- function(res, taxon_id, places, resolve, db, name = NULL,
   if (!any(todo)) return(res)
   # "No record of its own here" means no record at all - an extinct one included.  With
   # exclude_extinct, a lost population has no opinions, and is A; it is still a record of
-  # the species here, and its genus must not turn "gone" into "introduced".
+  # the species here, and its genus must not turn "gone" into "introduced".  So ask exactly
+  # what the resolver asks - nsr_opinions_for(), which reaches overlapping polygons too -
+  # but with extinct records kept, plus the direct rows on the country the place was given
+  # with, as the resolver takes them.
   own <- vapply(which(todo), function(i) {
-    rws <- db$chk_idx_taxon[[as.character(taxon_id[i])]]
-    if (is.null(rws)) return(FALSE)
+    tid <- as.character(taxon_id[i])
     fine <- places$fine[[i]]
     ctry <- places$country[[i]]
     keys <- if (length(fine)) fine else ctry
-    here <- c(nsr_consulted_regions(keys, db, min_overlap), setdiff(ctry, keys))
-    any(db$chk_region[rws] %in% here)
+    anc <- setdiff(ctry, keys)
+    !is.null(nsr_opinions_for(tid, keys, db, min_overlap, exclude_extinct = FALSE)) ||
+      length(unlist(mget(paste(tid, anc), db$chk_env, ifnotfound = list(NULL)))) > 0
   }, logical(1))
   todo[which(todo)[own]] <- FALSE
   if (!any(todo)) return(res)
