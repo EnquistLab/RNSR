@@ -28,10 +28,9 @@ Suggests:
         terra,
         testthat,
         devtools,
-        BIEN,
         TNRS,
         vcr (>= 0.6.0),
         withr
 Additional_repositories: https://matildabrown.github.io/drat
-VignetteBuilder: knitr
+VignetteBuilder: knitr, rmarkdown
 RoxygenNote: 7.3.3

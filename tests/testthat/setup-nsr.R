@@ -9,10 +9,14 @@ url <- "https://nsrapi.xyz/nsr_wsb.php" # production
 # url <- "www.google.com"
 # url <- "www.hisstank.com"
 
-library("vcr") # *Required* as vcr is set up on loading
+# vcr is in Suggests: without it (as in CRAN's no-Suggests checks) the tests that replay
+# recorded API responses skip themselves
+if (requireNamespace("vcr", quietly = TRUE)) {
+  library("vcr") # *Required* as vcr is set up on loading
 
-invisible(vcr::vcr_configure(
-  dir = vcr::vcr_test_path("fixtures")
-))
+  invisible(vcr::vcr_configure(
+    dir = vcr::vcr_test_path("fixtures")
+  ))
 
-vcr::check_cassette_names()
+  vcr::check_cassette_names()
+}

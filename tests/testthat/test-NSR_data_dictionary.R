@@ -5,6 +5,8 @@ test_that("example works", {
   # skip_if_offline(host = "r-project.org")
   
   
+  skip_if_not_installed("vcr")
+
   vcr::use_cassette("nsr_dd", {
     
     NSR_fields <- NSR_data_dictionary(url = url,
@@ -22,6 +24,8 @@ test_that("example2 works", {
   # skip_if_offline(host = "r-project.org")
   
   
+  skip_if_not_installed("vcr")
+
   vcr::use_cassette("nsr_dd_status", {
     
     NSR_status <- NSR_data_dictionary(native_status = TRUE,

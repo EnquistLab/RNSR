@@ -5,6 +5,11 @@
 # rhub::rhub_setup()
 #
 # It is unlikely that you need to modify this file manually.
+#
+# NSR modification: the "Add the drat repository" step in both jobs below, so
+# pak can install rWCVPdata (Suggests), which isn't on CRAN. pak does not read
+# DESCRIPTION's Additional_repositories. Keep that step if this file is
+# regenerated with rhub::rhub_setup().
 
 name: R-hub
 run-name: "${{ github.event.inputs.id }}: ${{ github.event.inputs.name || format('Manually run by {0}', github.triggering_actor) }}"
@@ -56,6 +61,20 @@ jobs:
         with:
           token: ${{ secrets.RHUB_TOKEN }}
           job-config: ${{ matrix.config.job-config }}
+      - name: Add the drat repository for rWCVPdata
+        run: |
+          # rWCVPdata (Suggests) isn't on CRAN: add the repository named in
+          # DESCRIPTION's Additional_repositories to every later R session.
+          # utils is loaded first because 'repos' isn't set yet while profiles
+          # run, and utils won't set its defaults once something else has.
+          f <- Sys.getenv("R_PROFILE_USER")
+          if (!nzchar(f)) f <- path.expand("~/.Rprofile")
+          line <- paste('local({ loadNamespace("utils");',
+                        'options(repos = c(getOption("repos"),',
+                        'rWCVPdata = "https://matildabrown.github.io/drat")) })')
+          write(line, file = f, append = TRUE)
+          message("Added to ", f, ": ", line)
+        shell: Rscript {0}
       - uses: r-hub/actions/setup-deps@v1
         with:
           token: ${{ secrets.RHUB_TOKEN }}
@@ -85,6 +104,20 @@ jobs:
         with:
           token: ${{ secrets.RHUB_TOKEN }}
           job-config: ${{ matrix.config.job-config }}
+      - name: Add the drat repository for rWCVPdata
+        run: |
+          # rWCVPdata (Suggests) isn't on CRAN: add the repository named in
+          # DESCRIPTION's Additional_repositories to every later R session.
+          # utils is loaded first because 'repos' isn't set yet while profiles
+          # run, and utils won't set its defaults once something else has.
+          f <- Sys.getenv("R_PROFILE_USER")
+          if (!nzchar(f)) f <- path.expand("~/.Rprofile")
+          line <- paste('local({ loadNamespace("utils");',
+                        'options(repos = c(getOption("repos"),',
+                        'rWCVPdata = "https://matildabrown.github.io/drat")) })')
+          write(line, file = f, append = TRUE)
+          message("Added to ", f, ": ", line)
+        shell: Rscript {0}
       - uses: r-hub/actions/setup-deps@v1
         with:
           job-config: ${{ matrix.config.job-config }}

@@ -31,47 +31,17 @@ The coordinates service is separate from the main NSR API.  Its address can be
 }
 \examples{
 \dontrun{
-library(BIEN)
+# Species and coordinates, with an id for each record
+occs <- data.frame(species = c("Acer rubrum", "Acer rubrum", "Acer platanoides"),
+                  latitude = c(45.50, 51.51, 45.50),
+                  longitude = c(-73.57, -0.13, -73.57),
+                  id = c("1", "2", "3"))
 
-# Get some data
+results <- NSR:::NSR_from_coordinates(occurrence_dataframe = occs)
 
-ar_occs <- BIEN_occurrence_species(species = "Acer rubrum",
-                                  natives.only = FALSE,
-                                  political.boundaries = TRUE,
-                                  limit=100)
-
-
-# Rename columns so that we can differentiate between coordinates declared
-# and coordinates inferred
-
-colnames(ar_occs)[which(colnames(ar_occs)=="country")] <- "country_declared"
-colnames(ar_occs)[which(colnames(ar_occs)=="state_province")] <- "state_declared"
-colnames(ar_occs)[which(colnames(ar_occs)=="county")] <- "county_declared"
-
-# Select needed fields and add an ID column
-
-ar_occs_subset <- ar_occs[c("scrubbed_species_binomial","latitude","longitude")]
-
-# Toss duplicates (speeds up processing)
-
-ar_occs_subset <- unique(ar_occs_subset)
-
-# Add an id column
-
-ar_occs_subset$id <- as.character(1:nrow(ar_occs_subset))
-
-# Get results
-
-results_ar <- NSR:::NSR_from_coordinates(occurrence_dataframe = ar_occs_subset)
-
-# Join results back to original data
-
-results_ar <- ar_occs_subset |>
- merge(y = results_ar,by.x = c("id"),
-       by.y = c("input_id"))
-
-ar_occs <- ar_occs |> merge(results_ar,
-                           by = c("latitude","longitude","scrubbed_species_binomial"))
+# Join the results back to the input
+merge(occs, results, by.x = "id", by.y = "input_id")
 }
+
 }
 \keyword{internal}

@@ -5,6 +5,8 @@ test_that("example works", {
   # skip_if_offline(host = "r-project.org")
 
 
+  skip_if_not_installed("vcr")
+
   vcr::use_cassette("nsr_sources", {
     sources <- NSR_sources(
       url = url,
