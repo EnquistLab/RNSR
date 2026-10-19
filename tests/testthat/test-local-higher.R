@@ -14,7 +14,9 @@ higher_db <- function() {
     "g_mix   gadm1:CAN.11_1   present     vascan  0",   # ...merely present per VASCAN
     "g_duo   gadm1:CAN.11_1   introduced  vascan  0",   # Duo: introduced in Quebec...
     "g_duo   gadm1:CAN.4_1    introduced  vascan  0",   # ...and in New Brunswick
-    "s_lost  wgsrpd3:QUE      native      wcvp    1")   # an Endemica once native in Quebec
+    "s_lost  wgsrpd3:QUE      native      wcvp    1",   # an Endemica once native in Quebec
+    "f_int   wgsrpd3:QUE      introduced  wcvp    0",   # family Introfam: introduced in Quebec
+    "f_end   wgsrpd3:BZL      native      wcvp    0")   # family Endfam: native only in Brazil S
   f <- do.call(rbind, strsplit(trimws(sub("#.*$", "", spec)), "[[:space:]]+"))
   checklist <- data.frame(taxon_id = f[, 1], region_key = f[, 2], status = f[, 3],
                           source_name = f[, 4], is_cultivated = 0L,
@@ -33,6 +35,15 @@ higher_db <- function() {
                      "Genus", "Species", "Genus", "Species", "Genus", "Species",
                      "Genus", "Species", "Species"),
     stringsAsFactors = FALSE)
+  # family-rank taxa, and species that reach them: two through genera the cache does not
+  # hold, one through Acacia, whose genus answers first
+  taxa <- rbind(taxa, data.frame(
+    taxon_id     = c("f_int", "f_end", "s_fi", "s_fe", "s_both"),
+    species_name = c("Introfam", "Endfam", "Plainus one", "Plainia one", "Acacia three"),
+    genus        = c(NA, NA, "Plainus", "Plainia", "Acacia"),
+    family       = c("Introfam", "Endfam", "Introfam", "Endfam", "Endfam"),
+    rank         = c("Family", "Family", "Species", "Species", "Species"),
+    stringsAsFactors = FALSE))
   NSR:::nsr_index_db(list(
     sources = data.frame(source_name = c("wcvp", "vascan"), is_comprehensive = TRUE,
                          stringsAsFactors = FALSE),
@@ -172,4 +183,33 @@ test_that("a lost population stays A, whatever its genus", {
   # once native in Quebec (an extinct record), in a genus endemic to Brazil S: the
   # record is the species' own, so its genus does not turn "gone" into "introduced"
   for (r in answer("s_lost", quebec(), higher_db())) expect_equal(r$code, "A")
+})
+
+# The family step runs only where the genus supplies no inference, by the same rules.
+test_that("a family introduced here makes a species of an unknown genus introduced", {
+  skip_if_not_installed("data.table")
+  for (r in answer("s_fi", quebec(), higher_db())) {
+    expect_equal(r$code, "I")
+    expect_equal(r$scope, "family")
+    expect_match(r$reason, "its family Introfam is introduced")
+  }
+})
+
+test_that("a family endemic elsewhere makes a species of an unknown genus Ie", {
+  skip_if_not_installed("data.table")
+  for (r in answer("s_fe", quebec(), higher_db())) {
+    expect_equal(r$code, "Ie")
+    expect_equal(r$scope, "family")
+    expect_match(r$reason, "its family Endfam is endemic to Brazil S")
+  }
+})
+
+test_that("the genus answers before the family", {
+  skip_if_not_installed("data.table")
+  # Acacia (introduced here) and Endfam (endemic to Brazil S) would both answer; the genus,
+  # the nearer taxon, does
+  for (r in answer("s_both", quebec(), higher_db())) {
+    expect_equal(r$code, "I")
+    expect_equal(r$scope, "genus")
+  }
 })
