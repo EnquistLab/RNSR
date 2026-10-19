@@ -61,12 +61,19 @@ test_that("NSR_metadata() stops at the first part it can't retrieve", {
 })
 
 test_that("nsr_core() doesn't mistake a same-named object in the user's workspace for a reply", {
-  skip_on_cran() # it puts an object in the global environment, removed again on exit
+  skip_on_cran() # it puts an object in the global environment, put back as it was on exit
   local_mocked_bindings(check_internet = function() TRUE,
                         POST = function(...) stop("Could not resolve host: nsrapi.xyz"))
+  # a developer running devtools::test() may have a results_json of their own
+  had <- exists("results_json", envir = globalenv(), inherits = FALSE)
+  if (had) previous <- get("results_json", envir = globalenv())
+  withr::defer(if (had) {
+    assign("results_json", previous, envir = globalenv())
+  } else {
+    rm("results_json", envir = globalenv())
+  })
   assign("results_json", fake_response(200L, '{"meta":{"db_version":"stale"}}'),
          envir = globalenv())
-  withr::defer(rm("results_json", envir = globalenv()))
   expect_message(r <- NSR:::nsr_core(mode = "meta"))
   expect_null(r)
 })
