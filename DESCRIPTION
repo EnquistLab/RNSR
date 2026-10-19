@@ -23,7 +23,6 @@ Suggests:
         data.table,
         nanoparquet,
         rmarkdown,
-        rWCVP,
         rWCVPdata,
         sf,
         terra,

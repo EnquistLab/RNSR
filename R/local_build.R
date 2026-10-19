@@ -183,7 +183,7 @@ NSR_local_build <- function(sources = "wcvp",
               "The checklist tables are written, but until this raster exists no query ",
               "can reach a WCVP opinion: coordinates cannot be placed in a WCVP region, ",
               "and division names resolve to GADM, which needs the link table below. ",
-              "Install 'rWCVPdata' (or 'rWCVP'), then re-run NSR_local_build(overwrite = TRUE).",
+              "Install 'rWCVPdata', then re-run NSR_local_build(overwrite = TRUE).",
               call. = FALSE)
     }
   }
