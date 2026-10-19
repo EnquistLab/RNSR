@@ -4,6 +4,8 @@ context("nsr main")
 test_that("example works", {
   # skip_if_offline(host = "r-project.org")
 
+  skip_if_not_installed("vcr")
+
   vcr::use_cassette("nsr_example", {
     
     results <- NSR(occurrence_dataframe = nsr_testfile,

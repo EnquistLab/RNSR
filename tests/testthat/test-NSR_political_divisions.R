@@ -3,6 +3,8 @@ context("nsr pol divs")
 test_that("example works", {
   # skip_if_offline(host = "r-project.org")
   
+  skip_if_not_installed("vcr")
+
   vcr::use_cassette("nsr_poldivs", {
     
     nsr_poldivs <- NSR_political_divisions(by_country = TRUE)
@@ -22,6 +24,8 @@ test_that("example works", {
 test_that("example 2 works", {
   # skip_if_offline(host = "r-project.org")
   
+  skip_if_not_installed("vcr")
+
   vcr::use_cassette("nsr_checklist", {
     
     nsr_checklists <- NSR_political_divisions(by_country = FALSE)

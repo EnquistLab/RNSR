@@ -4,6 +4,8 @@ context("nsr version")
 test_that("example works", {
   # skip_if_offline(host = "r-project.org")
 
+  skip_if_not_installed("vcr")
+
   vcr::use_cassette("nsr_version", {
     NSR_version_metadata <- NSR_version(
       url = url,

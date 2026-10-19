@@ -4,6 +4,8 @@ context("nsr simple")
 test_that("example works", {
   # skip_if_offline(host = "r-project.org")
   
+  skip_if_not_installed("vcr")
+
   vcr::use_cassette("nsr_simple_example", {
     
     results <- NSR_simple(species = "Acer rubrum",
@@ -25,6 +27,8 @@ test_that("example works", {
 test_that("second example works", {
   # skip_if_offline(host = "r-project.org")
   
+  skip_if_not_installed("vcr")
+
   vcr::use_cassette("nsr_simple_example2", {
 
     results2 <- NSR_simple(species = c("Acer rubrum", "Aspen tremuloides") ,
