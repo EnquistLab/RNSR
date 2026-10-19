@@ -23,12 +23,15 @@
 #'
 #' Internal.  Read off the taxa table: a taxon's \code{genus} and \code{family} names,
 #' matched to taxa of that rank.  Where a taxon is not in the table (a name resolved at
-#' query time), its genus is the first word of the submitted name, and its family that
-#' genus's.  A taxon is never its own higher taxon.
+#' query time), its genus is the first word of \code{name} - which the caller passes as
+#' the ACCEPTED name, so a synonym that moved genus is read under its new genus - and its
+#' family is that genus's, or else \code{family}, the accepted family from resolution.
+#' A taxon is never its own higher taxon.
 #' @return data.frame with \code{genus_id}, \code{genus}, \code{family_id}, \code{family}.
 #' @keywords internal
 #' @noRd
-nsr_higher_ids <- function(taxon_id, db, name = NULL) {
+nsr_higher_ids <- function(taxon_id, db, name = NULL, family = NULL) {
+  accepted_family <- family
   tx <- db$taxa
   rk <- tolower(tx$rank)
   i <- match(taxon_id, tx$taxon_id)
@@ -44,6 +47,10 @@ nsr_higher_ids <- function(taxon_id, db, name = NULL) {
   family <- tx$family[i]
   nofam <- is.na(family) | !nzchar(family)
   family[nofam] <- tx$family[g][gi][nofam]
+  if (!is.null(accepted_family)) {
+    nofam <- is.na(family) | !nzchar(family)
+    family[nofam] <- accepted_family[nofam]
+  }
   f <- rk == "family"
   family_id <- tx$taxon_id[f][match(family, tx$species_name[f])]
   self <- function(x) !is.na(x) & !is.na(taxon_id) & x == taxon_id
@@ -60,8 +67,10 @@ nsr_higher_ids <- function(taxon_id, db, name = NULL) {
 #' and missed on another.
 #' @keywords internal
 #' @noRd
-nsr_answer <- function(taxon_id, places, resolve, db, name = NULL, min_overlap = 0.01) {
-  nsr_apply_higher(resolve(taxon_id, places), taxon_id, places, resolve, db, name, min_overlap)
+nsr_answer <- function(taxon_id, places, resolve, db, name = NULL, min_overlap = 0.01,
+                       family = NULL) {
+  nsr_apply_higher(resolve(taxon_id, places), taxon_id, places, resolve, db, name, min_overlap,
+                   family)
 }
 
 #' Apply the two sound downward inferences from genus, then family
@@ -77,7 +86,7 @@ nsr_answer <- function(taxon_id, places, resolve, db, name = NULL, min_overlap =
 #' @keywords internal
 #' @noRd
 nsr_apply_higher <- function(res, taxon_id, places, resolve, db, name = NULL,
-                             min_overlap = 0.01) {
+                             min_overlap = 0.01, family = NULL) {
   todo <- !is.na(taxon_id) & res$code %in% c("A", "UNK") & is.na(res$opinions)
   if (!any(todo)) return(res)
   # "No record of its own here" means no record at all - an extinct one included.  With
@@ -94,7 +103,7 @@ nsr_apply_higher <- function(res, taxon_id, places, resolve, db, name = NULL,
   }, logical(1))
   todo[which(todo)[own]] <- FALSE
   if (!any(todo)) return(res)
-  h <- nsr_higher_ids(taxon_id, db, name)
+  h <- nsr_higher_ids(taxon_id, db, name, family)
   for (lvl in c("genus", "family")) {
     hid <- h[[paste0(lvl, "_id")]]
     rows <- which(todo & !is.na(hid))

@@ -187,10 +187,21 @@ NSR_local <- function(occurrence_dataframe, dir = nsr_cache_dir(), resolve_names
     lengths(strsplit(trimws(species), "[[:space:]]+")) < 2
   taxon_id <- db$name_index$taxon_id[match(species, db$name_index$species_name)]
   need <- unique(species[is.na(taxon_id) & !is.na(species) & nzchar(species) & !above_species])
+  # The name a higher-rank lookup reads its genus from.  As submitted, unless resolution
+  # replaced it: a synonym can have moved genus (Acacia farnesiana is Vachellia farnesiana),
+  # and its higher taxa are then the accepted name's - the old genus's status would be
+  # carried to the wrong species.  The echoed species column stays as submitted.
+  higher_name <- species
+  higher_family <- rep(NA_character_, n)
   if (resolve_names && length(need)) {
     if (!quiet) message("Resolving ", format(length(need), big.mark = ","), " names ...")
     r <- nsr_resolve_names(need, quiet = quiet, species_index = db$name_index)
-    taxon_id[is.na(taxon_id)] <- r$taxon_id[match(species[is.na(taxon_id)], r$name)]
+    fill <- which(is.na(taxon_id))
+    j <- match(species[fill], r$name)
+    taxon_id[fill] <- r$taxon_id[j]
+    acc <- r$species_name[j]
+    higher_name[fill] <- ifelse(is.na(acc), higher_name[fill], acc)
+    higher_family[fill] <- r$family[j]
   }
 
   # ---- place ------------------------------------------------------------------------
@@ -206,7 +217,8 @@ NSR_local <- function(occurrence_dataframe, dir = nsr_cache_dir(), resolve_names
     nsr_resolve_status_set(tid, pl, db, min_overlap, exclude_extinct) else
     nsr_resolve_status(tid, pl, db, min_overlap, exclude_extinct)
   # the taxon's own records, then what its genus or family says where it has none here
-  res <- nsr_answer(taxon_id, places, resolve, db, name = species, min_overlap = min_overlap)
+  res <- nsr_answer(taxon_id, places, resolve, db, name = higher_name, family = higher_family,
+                    min_overlap = min_overlap)
 
   # ---- records whose two statements of place disagree ---------------------------------
   # Neither basis is taken as authoritative, so the pooled answer - which drew on
@@ -217,7 +229,8 @@ NSR_local <- function(occurrence_dataframe, dir = nsr_cache_dir(), resolve_names
   status_nm <- rep(NA_character_, n)
   cf <- places$conflict
   if (any(cf)) {
-    split <- nsr_split_answers(taxon_id, places, cf, resolve, db, species, min_overlap)
+    split <- nsr_split_answers(taxon_id, places, cf, resolve, db, higher_name, min_overlap,
+                               family = higher_family)
     status_xy[cf] <- split$xy
     status_nm[cf] <- split$nm
     res$code[cf] <- "UNK"
@@ -478,10 +491,11 @@ nsr_places_agree <- function(kx, kn) {
 #' @keywords internal
 #' @noRd
 nsr_split_answers <- function(taxon_id, places, cf, resolve, db, name = NULL,
-                              min_overlap = 0.01) {
+                              min_overlap = 0.01, family = NULL) {
   one <- function(keys) {
     nsr_answer(taxon_id[cf], nsr_split_keys(keys[cf]), resolve, db,
-               if (is.null(name)) NULL else name[cf], min_overlap)$code
+               if (is.null(name)) NULL else name[cf], min_overlap,
+               family = if (is.null(family)) NULL else family[cf])$code
   }
   list(xy = one(places$xy), nm = one(places$nm))
 }
