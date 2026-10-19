@@ -30,6 +30,12 @@
   bases are answered separately in native_status_coordinates and native_status_names.
 
 ## Bug fixes
+* NSR_metadata() stopped with an error ("'names' attribute [3] must be the same length
+  as the vector [0]") when the NSR API could not be reached, which broke the package's
+  examples and vignette on CRAN's Windows check machines and led to its archival.  It
+  now gives a message and returns NULL, like the package's other API functions.  Tests
+  now put every exported API function through an unreachable API, an HTTP error and an
+  empty reply, with the request mocked.
 * NSR_metadata() had its sources and version elements named the wrong way round:
   metadata$version held the sources and metadata$sources the version.
 * NSR() sent any input in a single request, although the API accepts at most 5,000

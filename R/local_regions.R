@@ -53,12 +53,9 @@ nsr_wgsrpd_polygons <- function() {
     p <- try(rWCVPdata::wgsrpd3, silent = TRUE)
     if (!inherits(p, "try-error")) return(sf::st_as_sf(p))
   }
-  if (requireNamespace("rWCVP", quietly = TRUE)) {
-    e <- new.env()
-    utils::data("wgsrpd3", package = "rWCVP", envir = e)
-    return(sf::st_as_sf(get("wgsrpd3", envir = e)))
-  }
-  stop("The WGSRPD level-3 polygons need the 'rWCVPdata' (or 'rWCVP') package.", call. = FALSE)
+  stop("The WGSRPD level-3 polygons need the 'rWCVPdata' package, installed with ",
+       "install.packages(\"rWCVPdata\", repos = c(\"https://matildabrown.github.io/drat\", ",
+       "getOption(\"repos\")))", call. = FALSE)
 }
 
 #' Spatial links between region systems

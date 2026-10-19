@@ -183,7 +183,7 @@ NSR_local_build <- function(sources = "wcvp",
               "The checklist tables are written, but until this raster exists no query ",
               "can reach a WCVP opinion: coordinates cannot be placed in a WCVP region, ",
               "and division names resolve to GADM, which needs the link table below. ",
-              "Install 'rWCVPdata' (or 'rWCVP'), then re-run NSR_local_build(overwrite = TRUE).",
+              "Install 'rWCVPdata', then re-run NSR_local_build(overwrite = TRUE).",
               call. = FALSE)
     }
   }
@@ -276,6 +276,30 @@ nsr_match_poldiv <- function(country, state = NULL, bb) {
   out
 }
 
+#' TNRS_local(), which TNRS added in 0.4.0
+#'
+#' Internal.  Looked up when it's needed rather than called as TNRS::TNRS_local(), so the
+#' package installs and passes R CMD check with an older TNRS: only the offline build
+#' needs it.
+#' @keywords internal
+#' @noRd
+nsr_tnrs_local <- function() {
+  nsr_need("TNRS", what = "Resolving names against WCVP")
+  if (!nsr_has_export("TNRS", "TNRS_local")) {
+    stop("Resolving names against WCVP needs TNRS 0.4.0 or later, for TNRS_local(); the ",
+         "installed version is ", utils::packageVersion("TNRS"), ".  Install the newer ",
+         "version with remotes::install_github(\"EnquistLab/RTNRS\").", call. = FALSE)
+  }
+  getExportedValue("TNRS", "TNRS_local")
+}
+
+#' Whether a package exports a function
+#' @keywords internal
+#' @noRd
+nsr_has_export <- function(pkg, name) {
+  name %in% getNamespaceExports(pkg)
+}
+
 #' Resolve checklist names to WCVP accepted species
 #'
 #' Internal.  The id returned is the SPECIES' id, not an infraspecific one, so every
@@ -283,9 +307,9 @@ nsr_match_poldiv <- function(country, state = NULL, bb) {
 #' @keywords internal
 #' @noRd
 nsr_resolve_names <- function(names_in, quiet = FALSE, species_index = NULL) {
-  nsr_need("TNRS", what = "Resolving names against WCVP")
-  r <- TNRS::TNRS_local(taxonomic_names = names_in, sources = "wcvp", matches = "best",
-                        build_missing = FALSE, quiet = quiet)
+  tnrs_local <- nsr_tnrs_local()
+  r <- tnrs_local(taxonomic_names = names_in, sources = "wcvp", matches = "best",
+                  build_missing = FALSE, quiet = quiet)
   acc <- r$Accepted_species
   acc[is.na(acc) | !nzchar(acc)] <- NA_character_
   # prefer the species' own id where we know it, so subspecies land on their species

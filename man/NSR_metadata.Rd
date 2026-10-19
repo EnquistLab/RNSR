@@ -12,7 +12,7 @@ NSR_metadata(bibtex_file = NULL, ...)
 \item{...}{Additional arguments passed to internal functions.}
 }
 \value{
-List containing: (1) bibtex-formatted citation information, (2) information about NSR data sources, and (3) NSR version information.
+List containing: (1) bibtex-formatted citation information, (2) information about NSR data sources, and (3) NSR version information.  If any of these can't be retrieved (e.g. the API is unreachable), a message is given and NULL is returned.
 }
 \description{
 Returns metadata on NSR including version and citation information

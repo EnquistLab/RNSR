@@ -68,7 +68,7 @@ nsr_core <- function(url = "https://nsrapi.xyz/nsr_wsb.php",
   
   #Return NULL if API isn't working
 
-  if(!exists("results_json")){
+  if(!exists("results_json", inherits = FALSE)){
     return(invisible(NULL))
     }
   
@@ -92,7 +92,7 @@ nsr_core <- function(url = "https://nsrapi.xyz/nsr_wsb.php",
   
   #Convert to data.frame if things worked
   
-  if(!exists("results_raw")){
+  if(!exists("results_raw", inherits = FALSE)){
     return(invisible(NULL))
   }else{
     results <- as.data.frame(results_raw)  
