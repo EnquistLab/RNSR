@@ -4,6 +4,7 @@
 #' @param occurrence_dataframe A properly formatted dataframe, see https://bien.nceas.ucsb.edu/bien/tools/nsr/batch-mode/
 #' @param ... Additional arguments passed to internal functions.
 #' @return Dataframe containing NSR results.
+#' @details The NSR API accepts at most 5,000 observations per call. Larger inputs are split into batches of at most 5,000 rows, sent separately, and recombined in the order of the input.
 #' @export
 #' @examples \dontrun{
 #'
@@ -58,34 +59,46 @@ NSR <- function(occurrence_dataframe,
   }
   
 
-  # Convert the data to JSON
-  data_json <- toJSON(unname(occurrence_dataframe))
-  
-  results <- nsr_core(mode = "resolve",
-                       data_json = data_json, ...)
-  
-  # results <- nsr_core(mode = "resolve",
-  #                     data_json = data_json)
+  # The API accepts at most 5,000 observations per call, so send the data in batches
+  batch_index <- nsr_batch_index(n = nrow(occurrence_dataframe))
 
-  
-  #If the API didn't work, return a null
-  if(is.null(results)){
-    return(invisible(NULL))
+  results <- vector(mode = "list", length = length(batch_index))
+
+  for(i in seq_along(batch_index)){
+
+    # Convert the data to JSON (row subsets keep the original column order, which the API relies on)
+    data_json <- toJSON(unname(occurrence_dataframe[batch_index[[i]], , drop = FALSE]))
+
+    batch_results <- nsr_core(mode = "resolve",
+                              data_json = data_json, ...)
+
+    #If the API didn't work, return a null
+    if(is.null(batch_results)){
+      if(length(batch_index) > 1){
+        message(paste("NSR query failed on batch", i, "of", length(batch_index)))
+      }
+      return(invisible(NULL))
+    }
+
+    #Reformat results
+    rownames(batch_results) <- batch_results[,1]# Get header names from first row
+    batch_results <- t(batch_results)# Transpose
+    batch_results <- as.data.frame(batch_results)	# Convert to dataframe (again)
+    batch_results <- batch_results[-1, , drop = FALSE] # Remove the first row.
+    rownames(batch_results) <- NULL	# Reset row numbers
+
+    #If the results are properly formatted, but don't have the right columns, return a null
+    if(!"country" %in% colnames(batch_results)){
+      message("There appears to be a problem with the API, improperly formatted data were returned.")
+      return(invisible(NULL))
+    }
+
+    results[[i]] <- batch_results
+
   }
-  
-  #Reformat results
-  rownames(results) <- results[,1]# Get header names from first row
-  results <- t(results)# Transpose
-  results <- as.data.frame(results)	# Convert to dataframe (again)
-  results <- results[-1, ] # Remove the first row.
-  rownames(results) <- NULL	# Reset row numbers
-  
-  #If the results are properly formatted, but don't have the right columns, return a null
-  if(!"country" %in% colnames(results)){
-    message("There appears to be a problem with the API, improperly formatted data were returned.")
-    return(invisible(NULL))
-  }
-  
+
+  results <- do.call(rbind, results)
+
   #Re-order results to match original data
   results <- results[match(table = results$user_id,
                            x = occurrence_dataframe$user_id),]
@@ -94,7 +107,23 @@ NSR <- function(occurrence_dataframe,
   rownames(results) <- NULL 
   
   return(results)
-  
+
+}
+
+#'Split rows into API-sized batches
+#'
+#'Internal function returning a list of row indices, each of length at most batch_size
+#' @param n Number of rows.
+#' @param batch_size Maximum number of rows per batch. The NSR API accepts at most 5,000 observations per call.
+#' @keywords internal
+nsr_batch_index <- function(n, batch_size = 5000){
+
+  if(n == 0){
+    return(list(integer(0)))
+  }
+
+  split(seq_len(n), ceiling(seq_len(n) / batch_size))
+
 }
 
 

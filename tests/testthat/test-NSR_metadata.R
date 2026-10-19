@@ -17,4 +17,9 @@ test_that("example works", {
   expect_equal(object = class(metadata[[3]]), expected = "data.frame")
 
   expect_equal(object = length(metadata), expected = 3)
+
+  # each element is named for its contents
+  expect_equal(object = names(metadata), expected = c("citations", "sources", "version"))
+  expect_true("source_name" %in% colnames(metadata$sources))
+  expect_true("db_version" %in% colnames(metadata$version))
 })

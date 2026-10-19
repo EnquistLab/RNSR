@@ -19,7 +19,7 @@ NSR_metadata <- function(bibtex_file=NULL, ...){
   output[[2]] <- NSR_sources(...)
   output[[3]] <- NSR_version(...)
   
-  names(output)<-c("citations","version","sources")
+  names(output) <- c("citations", "sources", "version")
   
   #Write the bibtex information if a file is specified
   if(!is.null(bibtex_file)){writeLines(text = output$citations$citation, con = bibtex_file)}

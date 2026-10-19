@@ -1,12 +1,22 @@
-#'Check the native status for an occurrence using coordinates
+#'Check the native status for an occurrence using coordinates (deprecated)
 #'
-#'NSR returns information on native status for species based on their latitude and longitude.
+#'Deprecated, and no longer exported: the separate coordinates service this function
+#'calls is offline.  For native status by coordinates use
+#'\code{\link{NSR_local}(use_coordinates = TRUE)}, which needs no service.  The function
+#'is kept, as \code{NSR:::NSR_from_coordinates()}, for when the service returns.
 #' @param occurrence_dataframe A properly formatted dataframe. Should contain the columns: species, latitude, and longitude, and ID in that order.
 #' @param ... Additional arguments passed to internal functions.
-#' @return Dataframe containing NSR results.
+#' @return Dataframe containing NSR results, or \code{NULL} with a message if the service
+#'   cannot be reached or does not return results.
+#' @details The coordinates service is separate from the main NSR API.  Its address can be
+#'   changed without a new package release by setting
+#'   \code{options(NSR.coordinates_url = "https://...")}; the request is sent to that
+#'   address followed by \code{/batch}.  Like the package's other API functions, this one
+#'   does not stop with an error when the service is unavailable: it reports the problem
+#'   in a message and returns \code{NULL}.
 #' @importFrom jsonlite toJSON fromJSON
 #' @import httr
-#' @export
+#' @keywords internal
 #' @examples \dontrun{
 #'library(BIEN)
 #'
@@ -39,7 +49,7 @@
 #'
 #'# Get results
 #'
-#'results_ar <- NSR_from_coordinates(occurrence_dataframe = ar_occs_subset)
+#'results_ar <- NSR:::NSR_from_coordinates(occurrence_dataframe = ar_occs_subset)
 #'
 #'# Join results back to original data
 #'
@@ -52,6 +62,10 @@
 #' }
 NSR_from_coordinates <- function(occurrence_dataframe,
                 ...){
+
+  .Deprecated(new = "NSR_local", package = "NSR",
+              msg = paste("NSR_from_coordinates() is deprecated: the coordinates service it",
+                          "calls is offline. Use NSR_local(use_coordinates = TRUE) instead."))
   
   # check that input is a data.frame
   
@@ -119,22 +133,41 @@ NSR_from_coordinates <- function(occurrence_dataframe,
     #payload$id <- as.character(seq_len(nrow(payload)))
     payload$id <- as.character(payload$id)
     
-    base_url <- "https://f00f-128-111-85-31.ngrok-free.app" 
+    # A separate service from the main API, whose address has changed before: it can be
+    # set with options(NSR.coordinates_url = ) rather than waiting for a release.
+    base_url <- getOption("NSR.coordinates_url", "https://f00f-128-111-85-31.ngrok-free.app")
+    unreachable <- function(why) {
+      message("The NSR coordinates service at ", base_url, " ", why, ". ",
+              "If it has moved, set options(NSR.coordinates_url = \"<new address>\").")
+      invisible(NULL)
+    }
 
-  # run query
-    
-    response <- POST(
-      url = paste0(base_url, "/batch"),
-      body = payload,
-      encode = "json",
-      add_headers("ngrok-skip-browser-warning" = "true"),
-      content_type_json()
-    )
-  
+  # run query - failing with a message and NULL, never an error, like nsr_core()
+
+    if (!check_internet()) {
+      message("This function requires internet access, please check your connection.")
+      return(invisible(NULL))
+    }
+
+    response <- tryCatch(
+      POST(
+        url = paste0(base_url, "/batch"),
+        body = payload,
+        encode = "json",
+        add_headers("ngrok-skip-browser-warning" = "true"),
+        content_type_json()
+      ),
+      error = function(e) NULL)
+    if (is.null(response)) return(unreachable("could not be reached"))
+    if (response$status_code != 200) {
+      return(unreachable(paste0("returned HTTP status ", response$status_code)))
+    }
+
   # format results and return
-    
-    results <- fromJSON(content(response, "text", encoding = "UTF-8"))
-    
+
+    results <- tryCatch(fromJSON(rawToChar(response$content)), error = function(e) NULL)
+    if (is.null(results)) return(unreachable("did not return results in the expected format"))
+
     return(results)
   
 }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/NSR_from_coordinates.R
 \name{NSR_from_coordinates}
 \alias{NSR_from_coordinates}
-\title{Check the native status for an occurrence using coordinates}
+\title{Check the native status for an occurrence using coordinates (deprecated)}
 \usage{
 NSR_from_coordinates(occurrence_dataframe, ...)
 }
@@ -12,10 +12,22 @@ NSR_from_coordinates(occurrence_dataframe, ...)
 \item{...}{Additional arguments passed to internal functions.}
 }
 \value{
-Dataframe containing NSR results.
+Dataframe containing NSR results, or \code{NULL} with a message if the service
+  cannot be reached or does not return results.
 }
 \description{
-NSR returns information on native status for species based on their latitude and longitude.
+Deprecated, and no longer exported: the separate coordinates service this function
+calls is offline.  For native status by coordinates use
+\code{\link{NSR_local}(use_coordinates = TRUE)}, which needs no service.  The function
+is kept, as \code{NSR:::NSR_from_coordinates()}, for when the service returns.
+}
+\details{
+The coordinates service is separate from the main NSR API.  Its address can be
+  changed without a new package release by setting
+  \code{options(NSR.coordinates_url = "https://...")}; the request is sent to that
+  address followed by \code{/batch}.  Like the package's other API functions, this one
+  does not stop with an error when the service is unavailable: it reports the problem
+  in a message and returns \code{NULL}.
 }
 \examples{
 \dontrun{
@@ -50,7 +62,7 @@ ar_occs_subset$id <- as.character(1:nrow(ar_occs_subset))
 
 # Get results
 
-results_ar <- NSR_from_coordinates(occurrence_dataframe = ar_occs_subset)
+results_ar <- NSR:::NSR_from_coordinates(occurrence_dataframe = ar_occs_subset)
 
 # Join results back to original data
 
@@ -62,3 +74,4 @@ ar_occs <- ar_occs |> merge(results_ar,
                            by = c("latitude","longitude","scrubbed_species_binomial"))
 }
 }
+\keyword{internal}

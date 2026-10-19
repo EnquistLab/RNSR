@@ -17,6 +17,9 @@ Dataframe containing NSR results.
 \description{
 NSR returns information on native status for species within a political region.
 }
+\details{
+The NSR API accepts at most 5,000 observations per call. Larger inputs are split into batches of at most 5,000 rows, sent separately, and recombined in the order of the input.
+}
 \examples{
 \dontrun{
 

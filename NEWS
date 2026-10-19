@@ -3,7 +3,13 @@
 ===============
 
 ## NEW FEATURES
-* Added new function to check native status using species name and coordinates (NSR_from_coordinates)
+* NSR_from_coordinates(), added during this release cycle to check native status from
+  species names and coordinates, is deprecated and not exported: the separate
+  coordinates service it calls is offline.  For native status by coordinates use
+  NSR_local(use_coordinates = TRUE).  The function is kept, as
+  NSR:::NSR_from_coordinates(), for when the service returns; it now reports an
+  unreachable service in a message and returns NULL instead of stopping with an error,
+  and its address can be set with options(NSR.coordinates_url = "https://...").
 * Added an offline implementation: NSR_local() answers without an internet connection from a
   local cache built by NSR_local_build(), with NSR_local_status(), NSR_local_remove() and
   NSR_local_by_region() alongside it.  The checklist sources are acquired on the user's
@@ -24,6 +30,12 @@
   bases are answered separately in native_status_coordinates and native_status_names.
 
 ## Bug fixes
+* NSR_metadata() had its sources and version elements named the wrong way round:
+  metadata$version held the sources and metadata$sources the version.
+* NSR() sent any input in a single request, although the API accepts at most 5,000
+  records per call.  Larger inputs are now sent in batches of up to 5,000 and the
+  results recombined in input order; if any batch fails, NSR() returns NULL with a
+  message, as it does for a single failed request.
 
 ===============
 # NSR 0.1.0
