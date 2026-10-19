@@ -114,7 +114,9 @@ they agree the wider key set answers, as before. Where they do not, `place_confl
 `TRUE`, `native_status` is `UNK`, and `native_status_coordinates` and
 `native_status_names` carry the two answers. There is no service behaviour to follow
 here: `NSR()` takes names only and `NSR_from_coordinates()` takes coordinates only, so
-the API never meets the case.
+the API never meets the case. (`NSR_from_coordinates()` was deprecated and un-exported on
+2026-10-19: its coordinates service, run on vegbiendev behind an ngrok tunnel, went offline
+and has no maintainer. `NSR_local(use_coordinates = TRUE)` covers the need.)
 
 **Extinct records are kept and filtered at query time (BM, 2026-09-22):** WCVP's
 `extinct` is a bare 0/1 with no date or year - checked against the v15 distribution table,

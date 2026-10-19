@@ -3,7 +3,6 @@
 export(NSR)
 export(NSR_citations)
 export(NSR_data_dictionary)
-export(NSR_from_coordinates)
 export(NSR_local)
 export(NSR_local_build)
 export(NSR_local_by_region)

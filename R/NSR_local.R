@@ -35,8 +35,8 @@
 #' agree, both are used.  Where they disagree, \code{place_conflict} is \code{TRUE},
 #' \code{native_status} is \code{UNK}, and the two bases are answered separately in
 #' \code{native_status_coordinates} and \code{native_status_names} for you to judge.  The
-#' service has no combined mode to follow here: \code{\link{NSR}} takes names and
-#' \code{\link{NSR_from_coordinates}} takes coordinates.
+#' service has no combined mode to follow here: \code{\link{NSR}} takes division names
+#' only.
 #'
 #' \strong{Precedence.}  If any source says native, the answer is native: asserting
 #' nativity is a positive claim, whereas "introduced" and "absent" are often artefacts of

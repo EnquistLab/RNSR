@@ -1,6 +1,9 @@
-#'Check the native status for an occurrence using coordinates
+#'Check the native status for an occurrence using coordinates (deprecated)
 #'
-#'NSR returns information on native status for species based on their latitude and longitude.
+#'Deprecated, and no longer exported: the separate coordinates service this function
+#'calls is offline.  For native status by coordinates use
+#'\code{\link{NSR_local}(use_coordinates = TRUE)}, which needs no service.  The function
+#'is kept, as \code{NSR:::NSR_from_coordinates()}, for when the service returns.
 #' @param occurrence_dataframe A properly formatted dataframe. Should contain the columns: species, latitude, and longitude, and ID in that order.
 #' @param ... Additional arguments passed to internal functions.
 #' @return Dataframe containing NSR results, or \code{NULL} with a message if the service
@@ -13,7 +16,7 @@
 #'   in a message and returns \code{NULL}.
 #' @importFrom jsonlite toJSON fromJSON
 #' @import httr
-#' @export
+#' @keywords internal
 #' @examples \dontrun{
 #'library(BIEN)
 #'
@@ -46,7 +49,7 @@
 #'
 #'# Get results
 #'
-#'results_ar <- NSR_from_coordinates(occurrence_dataframe = ar_occs_subset)
+#'results_ar <- NSR:::NSR_from_coordinates(occurrence_dataframe = ar_occs_subset)
 #'
 #'# Join results back to original data
 #'
@@ -59,6 +62,10 @@
 #' }
 NSR_from_coordinates <- function(occurrence_dataframe,
                 ...){
+
+  .Deprecated(new = "NSR_local", package = "NSR",
+              msg = paste("NSR_from_coordinates() is deprecated: the coordinates service it",
+                          "calls is offline. Use NSR_local(use_coordinates = TRUE) instead."))
   
   # check that input is a data.frame
   

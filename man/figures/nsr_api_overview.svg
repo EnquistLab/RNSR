@@ -237,6 +237,6 @@
 
   <text x="1000" y="1536" font-size="20" fill="#222" text-anchor="middle" xml:space="preserve"><tspan font-weight="700">N</tspan> native   <tspan font-weight="700">Ne</tspan> native, endemic   <tspan font-weight="700">I</tspan> introduced   <tspan font-weight="700">Ie</tspan> endemic elsewhere, so introduced   <tspan font-weight="700">P</tspan> listed, no status   <tspan font-weight="700">A</tspan> on no checklist for the region   <tspan font-weight="700">UNK</tspan> no checklist there</text>
   <text x="1000" y="1574" font-size="20" fill="#444" text-anchor="middle">Other modes, same route: <tspan class="mono" font-size="18">NSR_metadata()  NSR_sources()  NSR_citations()  NSR_version()  NSR_data_dictionary()  NSR_political_divisions()</tspan></text>
-  <text x="1000" y="1608" font-size="20" fill="#444" text-anchor="middle"><tspan class="mono" font-size="18">NSR_from_coordinates()</tspan>: species and a point, sent to a separate /batch service and returned as the server sends it</text>
+  <text x="1000" y="1608" font-size="20" fill="#444" text-anchor="middle"><tspan class="mono" font-size="18">NSR_from_coordinates()</tspan> is deprecated and not exported: its separate coordinates service is offline - use <tspan class="mono" font-size="18">NSR_local(use_coordinates = TRUE)</tspan></text>
   <text x="1000" y="1642" font-size="20" font-style="italic" fill="#444" text-anchor="middle">Known service behaviour: a taxon no checklist covers (a moss, say) comes back A rather than UNK · names and divisions must match the checklists' spellings</text>
 </svg>
