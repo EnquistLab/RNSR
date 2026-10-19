@@ -24,6 +24,12 @@
   bases are answered separately in native_status_coordinates and native_status_names.
 
 ## Bug fixes
+* NSR_metadata() had its sources and version elements named the wrong way round:
+  metadata$version held the sources and metadata$sources the version.
+* NSR() sent any input in a single request, although the API accepts at most 5,000
+  records per call.  Larger inputs are now sent in batches of up to 5,000 and the
+  results recombined in input order; if any batch fails, NSR() returns NULL with a
+  message, as it does for a single failed request.
 
 ===============
 # NSR 0.1.0
