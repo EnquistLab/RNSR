@@ -45,15 +45,19 @@
 #'
 #' \strong{Rank.}  A distribution recorded against an accepted infraspecific taxon counts
 #' for its species: a subspecies of \emph{X} native somewhere means \emph{X} is native
-#' there.  The reverse is not done.  A species with no opinion of its own is not given its
-#' genus's status, because a genus being native to a region says nothing about which of its
-#' species are - it is the introduced one as readily as the native one.  Such a species is
-#' \code{UNK}, or \code{A} where a comprehensive source covers the place;
-#' \code{taxon_evaluable} distinguishes them.  A genus \emph{query} is still answered
-#' directly, from the distributions WCVP records against genera.  The live service does not
-#' give a species its genus's status either: it uses higher ranks only for endemism, where a
-#' genus or family endemic elsewhere makes a species \code{Ie} - which \code{NSR_local()}
-#' does not yet do.
+#' there.  Downward, a genus (or family) speaks for a species only through claims true of
+#' every species in it, and only where the species has no record of its own bearing on the
+#' place.  A genus native to a region says nothing about which of its species are - it is
+#' the introduced one as readily as the native one - so it never makes a species native.
+#' But a genus introduced in a polygon that is or contains the place has no native species
+#' there, so the species is \code{I}; and a genus absent from the place's comprehensive
+#' lists, with its whole native range confined elsewhere, makes it \code{Ie}.  The reason
+#' names the higher taxon, and \code{native_status_scope} is \code{"genus"} or
+#' \code{"family"}.  Only \code{native_status} is inferred this way; the per-level codes
+#' are the species' own records.  A genus \emph{query} is answered directly, from the
+#' distributions WCVP records against genera.  The live service makes the second inference
+#' but not the first, and also calls a species \code{Ne} where its genus is endemic to the
+#' place, which \code{NSR_local()} does not.
 #'
 #' \strong{Which polygons answer.}  A place is judged by the polygons it lies IN.  An
 #' opinion about a polygon containing the place applies to it (POWO's finest statement
@@ -183,10 +187,21 @@ NSR_local <- function(occurrence_dataframe, dir = nsr_cache_dir(), resolve_names
     lengths(strsplit(trimws(species), "[[:space:]]+")) < 2
   taxon_id <- db$name_index$taxon_id[match(species, db$name_index$species_name)]
   need <- unique(species[is.na(taxon_id) & !is.na(species) & nzchar(species) & !above_species])
+  # The name a higher-rank lookup reads its genus from.  As submitted, unless resolution
+  # replaced it: a synonym can have moved genus (Acacia farnesiana is Vachellia farnesiana),
+  # and its higher taxa are then the accepted name's - the old genus's status would be
+  # carried to the wrong species.  The echoed species column stays as submitted.
+  higher_name <- species
+  higher_family <- rep(NA_character_, n)
   if (resolve_names && length(need)) {
     if (!quiet) message("Resolving ", format(length(need), big.mark = ","), " names ...")
     r <- nsr_resolve_names(need, quiet = quiet, species_index = db$name_index)
-    taxon_id[is.na(taxon_id)] <- r$taxon_id[match(species[is.na(taxon_id)], r$name)]
+    fill <- which(is.na(taxon_id))
+    j <- match(species[fill], r$name)
+    taxon_id[fill] <- r$taxon_id[j]
+    acc <- r$species_name[j]
+    higher_name[fill] <- ifelse(is.na(acc), higher_name[fill], acc)
+    higher_family[fill] <- r$family[j]
   }
 
   # ---- place ------------------------------------------------------------------------
@@ -201,7 +216,9 @@ NSR_local <- function(occurrence_dataframe, dir = nsr_cache_dir(), resolve_names
   resolve <- function(tid, pl) if (use_set)
     nsr_resolve_status_set(tid, pl, db, min_overlap, exclude_extinct) else
     nsr_resolve_status(tid, pl, db, min_overlap, exclude_extinct)
-  res <- resolve(taxon_id, places)
+  # the taxon's own records, then what its genus or family says where it has none here
+  res <- nsr_answer(taxon_id, places, resolve, db, name = higher_name, family = higher_family,
+                    min_overlap = min_overlap)
 
   # ---- records whose two statements of place disagree ---------------------------------
   # Neither basis is taken as authoritative, so the pooled answer - which drew on
@@ -212,8 +229,10 @@ NSR_local <- function(occurrence_dataframe, dir = nsr_cache_dir(), resolve_names
   status_nm <- rep(NA_character_, n)
   cf <- places$conflict
   if (any(cf)) {
-    status_xy[cf] <- resolve(taxon_id[cf], nsr_split_keys(places$xy[cf]))$code
-    status_nm[cf] <- resolve(taxon_id[cf], nsr_split_keys(places$nm[cf]))$code
+    split <- nsr_split_answers(taxon_id, places, cf, resolve, db, higher_name, min_overlap,
+                               family = higher_family)
+    status_xy[cf] <- split$xy
+    status_nm[cf] <- split$nm
     res$code[cf] <- "UNK"
     res$reason[cf] <- paste0(
       "Coordinates and division names resolve to different places, so no single answer ",
@@ -461,6 +480,24 @@ nsr_places_agree <- function(kx, kn) {
     !length(a) || !length(b) || identical(sort(a), sort(b))
   }
   lvl("^gadm0:") && lvl("^gadm1:")
+}
+
+#' Answer each half of a split place on its own
+#'
+#' Internal.  For the rows whose coordinates and division names resolve to different
+#' places, the code each basis gives alone - through \code{nsr_answer()}, so with the same
+#' higher-rank inferences as any other answer.
+#' @return list of \code{xy} and \code{nm} codes, one per row of \code{cf}.
+#' @keywords internal
+#' @noRd
+nsr_split_answers <- function(taxon_id, places, cf, resolve, db, name = NULL,
+                              min_overlap = 0.01, family = NULL) {
+  one <- function(keys) {
+    nsr_answer(taxon_id[cf], nsr_split_keys(keys[cf]), resolve, db,
+               if (is.null(name)) NULL else name[cf], min_overlap,
+               family = if (is.null(family)) NULL else family[cf])$code
+  }
+  list(xy = one(places$xy), nm = one(places$nm))
 }
 
 #' Split a set of region keys into the finest level named and its country
@@ -730,26 +767,34 @@ nsr_consulted_regions <- function(keys, db, min_overlap = 0.01) {
 #'     as several WGSRPD areas (Brazil, Canada, the USA) is covered.
 #' }
 #' A country's GADM states carry no fractions, so they cannot add up to the country; the
-#' country is then covered through WGSRPD, or not at all.  Links are never followed into a
+#' country is then covered through WGSRPD, or not at all.  A place made of several polygons
+#' in one geography - a division from another system, spanning several GADM units - is
+#' covered only when each of them is.  Links are never followed into a
 #' geography the place already holds.  \code{whole} is the link builder's threshold for
 #' "the same place", 0.95, which absorbs the mismatch between two independent coastlines.
 #' @return TRUE or FALSE.
 #' @keywords internal
 #' @noRd
 nsr_place_covered <- function(keys, anc = character(0), db, min_overlap = 0.01, whole = 0.95) {
-  if (any(c(keys, anc) %in% db$covered)) return(TRUE)
+  if (any(anc %in% db$covered)) return(TRUE)
+  if (!length(keys)) return(FALSE)
   known <- unique(sub(":.*", "", keys))
-  for (k in keys) {
+  one <- function(k) {
+    if (k %in% db$covered) return(TRUE)
     li <- db$link_env[[k]]
-    if (is.null(li)) next
+    if (is.null(li)) return(FALSE)
     to <- db$link_to[li]
     rel <- db$link_rel[li]
     fr <- db$link_frac[li]
     ok <- fr >= min_overlap & !(sub(":.*", "", to) %in% known) & to %in% db$covered
-    if (any(ok & rel %in% c("same", "within"))) return(TRUE)
-    if (sum(fr[ok & rel == "contains"]) >= whole) return(TRUE)
+    any(ok & rel %in% c("same", "within")) || sum(fr[ok & rel == "contains"]) >= whole
   }
-  FALSE
+  # Keys in different geographies describe the same place - a point's WGSRPD area and its
+  # GADM state - so any one of them covered covers it.  Keys in the SAME geography are
+  # parts of it - the GADM units a division from another system spans - so every part
+  # must be covered: absence from one unit's list is not absence from the others.
+  cov <- vapply(keys, one, logical(1))
+  any(tapply(cov, sub(":.*", "", keys), all))
 }
 
 #' What kind of disagreement is this?

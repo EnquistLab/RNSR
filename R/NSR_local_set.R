@@ -89,9 +89,10 @@ NSR_local_by_region <- function(taxon_id, region_keys, country_keys = NULL,
   db <- nsr_local_db(dir)
   clean <- function(z) { z <- z[!is.na(z) & nzchar(z)]; if (!length(z)) character(0) else z }
   places <- list(fine = lapply(region_keys, clean), country = lapply(country_keys, clean))
-  res <- if (!is.null(db$chk_dt))
-           nsr_resolve_status_set(as.character(taxon_id), places, db, min_overlap, exclude_extinct)
-         else nsr_resolve_status(as.character(taxon_id), places, db, min_overlap, exclude_extinct)
+  resolve <- function(tid, pl) if (!is.null(db$chk_dt))
+    nsr_resolve_status_set(as.character(tid), pl, db, min_overlap, exclude_extinct) else
+    nsr_resolve_status(as.character(tid), pl, db, min_overlap, exclude_extinct)
+  res <- nsr_answer(as.character(taxon_id), places, resolve, db, min_overlap = min_overlap)
   data.frame(taxon_id = as.character(taxon_id),
              native_status_country = res$country_code,
              native_status_state_province = res$state_code,
@@ -195,12 +196,22 @@ nsr_resolve_status_set1 <- function(taxon_id, places, db, min_overlap = 0.01,
   # whole-place coverage, as nsr_place_covered(): the place or its country listed; a listed
   # polygon that is it or contains it; or listed polygons inside it making up >= 95% of it.
   # GADM children (added next) carry no fractions, so they never count.
+  # Per key first, then per place: keys in different geographies are the same place (any
+  # one covered will do), keys in the same geography are its parts (all must be covered).
   covered <- rep(FALSE, n)
-  covered[unique(Q0[region_key %in% db$covered]$qid)] <- TRUE
+  covered[unique(Q0[relation == "within" & region_key %in% db$covered]$qid)] <- TRUE
+  kc <- Q0[relation == "same", list(qid, key = region_key)]
+  kc[, cov := key %in% db$covered]
   if (exists("Lcov", inherits = FALSE) && nrow(Lcov)) {
-    covered[unique(Lcov[relation %in% c("same", "within")]$qid)] <- TRUE
+    via <- unique(Lcov[relation %in% c("same", "within"), list(qid, key = from_region)])
     whole <- Lcov[relation == "contains", list(s = sum(fraction)), by = c("qid", "from_region")]
-    covered[unique(whole[s >= 0.95]$qid)] <- TRUE
+    via <- unique(rbind(via, whole[s >= 0.95, list(qid, key = from_region)]))
+    kc[paste(qid, key) %in% paste(via$qid, via$key), cov := TRUE]
+  }
+  if (nrow(kc)) {
+    kc[, sys := sub(":.*", "", key)]
+    per <- kc[, list(ok = all(cov)), by = c("qid", "sys")][, list(ok = any(ok)), by = "qid"]
+    covered[per[ok == TRUE]$qid] <- TRUE
   }
   # GADM's exact parent/child containment, joined on the query's OWN polygons only so a
   # country's other states never reach a state-level query.  Deliberately after the

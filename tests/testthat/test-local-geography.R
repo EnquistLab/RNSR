@@ -351,3 +351,37 @@ test_that("a raster its index cannot name at all is an error, said plainly", {
   expect_error(suppressWarnings(NSR:::nsr_build_region_links(dir, quiet = TRUE)),
                "could be named")
 })
+
+test_that("a synonym that moved genus is not given its old genus's status", {
+  skip_if_not_installed("data.table")
+  dir <- broken_cache()
+  w <- function(x, t) nanoparquet::write_parquet(x, file.path(dir, paste0("nsr-", t, ".gz.parquet")),
+                                                 compression = "gzip")
+  # Acacia is introduced in Quebec; nothing is known of Vachellia
+  w(data.frame(taxon_id = c("t1", "g_aca"), species_name = c("Sp one", "Acacia"),
+               family = "Fabaceae", genus = c("Gen", "Acacia"), rank = c("species", "Genus"),
+               stringsAsFactors = FALSE), "taxa")
+  w(data.frame(taxon_id = c("t1", "g_aca"), region_key = "wgsrpd3:QUE",
+               status = c("native", "introduced"), is_cultivated = 0L, is_extinct = 0L,
+               source_name = "wcvp", stringsAsFactors = FALSE), "checklist")
+  nanoparquet::write_parquet(
+    data.frame(from_region = "gadm1:CAN.11_1", to_region = "wgsrpd3:QUE", relation = "same",
+               fraction = 0.99, stringsAsFactors = FALSE),
+    file.path(dir, "nsr-region-links.gz.parquet"), compression = "gzip")
+  # resolution: the submitted Acacia farnesiana is accepted as Vachellia farnesiana, an id
+  # the taxa table does not hold
+  local_mocked_bindings(
+    nsr_resolve_names = function(names_in, ...) data.frame(
+      name = names_in, taxon_id = "acc_vachellia", species_name = "Vachellia farnesiana",
+      family = "Fabaceae", genus = "Vachellia", rank = "species", stringsAsFactors = FALSE),
+    .package = "NSR")
+  q <- data.frame(species = "Acacia farnesiana", country = "Canada", state_province = "Quebec",
+                  stringsAsFactors = FALSE)
+  forget_warnings()
+  r <- NSR_local(q, dir = dir, quiet = TRUE)
+  # not I from Acacia: the species is a Vachellia, of which nothing is known here
+  expect_equal(r$native_status, "UNK")
+  expect_false(identical(r$native_status_scope, "genus"))
+  # and the record still shows the name as it was submitted
+  expect_equal(r$species, "Acacia farnesiana")
+})
