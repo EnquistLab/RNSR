@@ -22,12 +22,17 @@ What we changed:
   messages in place of results.
 * Tests that need the live API are skipped on CRAN or replay recorded responses (vcr).
 
+The package also passes R CMD check without its suggested packages
+(_R_CHECK_DEPENDS_ONLY_=true): tests that need a suggested package skip themselves when
+it isn't installed, and rmarkdown is listed in VignetteBuilder alongside knitr, since
+the vignette's knitr::rmarkdown engine needs it.
+
 This version also adds an offline resolver, NSR_local(), whose data are built on the
 user's machine by NSR_local_build(). Nothing derived from the checklists ships with the
 package, and the packages it needs are in Suggests. One of them, rWCVPdata, is not on
 CRAN; it is available from the repository given in Additional_repositories, and it is
 used only conditionally, through requireNamespace(). We dropped rWCVP from Suggests,
-since it has been archived on CRAN.
+since it has been archived on CRAN, and BIEN, which was only used in an example.
 
 NSR_local_build() resolves names with TNRS_local(), which TNRS (Suggests) adds in
 version 0.4.0; CRAN currently has 0.3.6. The function is looked up at run time, after
@@ -37,7 +42,12 @@ TNRS 0.3.6, and nothing outside the offline build uses TNRS.
 
 ## Test environments
 
-* local Windows 11 x64, R 4.4.1
+* local: Windows 11 x64, R 4.4.1
+* win-builder: R-devel, R-release and R-oldrelease
+* GitHub Actions: macOS (R-release), Windows (R-release), Ubuntu (R-devel, R-release,
+  R-oldrel-1)
+* R-hub: Linux, Windows and macOS (R-devel); Ubuntu (R-release, R-next); Fedora with
+  ATLAS BLAS; Fedora without suggested packages; and with \donttest examples run
 
 ## R CMD check results
 
@@ -47,6 +57,3 @@ TNRS 0.3.6, and nothing outside the offline build uses TNRS.
   - New submission. Package was archived on CRAN: addressed above.
   - Suggests or Enhances not in mainstream repositories: rWCVPdata. It is available
     using the Additional_repositories specification, as above.
-
-(Locally there is a second NOTE, "unable to verify current time", which comes from the
-local network rather than the package.)
