@@ -1,6 +1,7 @@
 # RNSR
 
   [![R-CMD-check](https://github.com/EnquistLab/RNSR/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/EnquistLab/RNSR/actions/workflows/R-CMD-check.yaml)
+  [![DOI](https://zenodo.org/badge/169631544.svg)](https://doi.org/10.5281/zenodo.13942035)
 
 R package containing tools to access the Native Status Resolver API and associated functionality
 
